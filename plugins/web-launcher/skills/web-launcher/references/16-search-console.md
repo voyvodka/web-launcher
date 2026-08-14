@@ -43,6 +43,10 @@ bug. ⚠️ (guidance is from talks and office hours; not in written documentati
 supported."* Scopes: `.../auth/webmasters` (read-write, needed for `sitemaps.submit`) and
 `.../auth/webmasters.readonly`.
 
+**A domain property is named `sc-domain:example.com`** in the API, not as a URL. URL-prefix
+properties are named by their URL with the trailing slash. `sites.list` returns the exact strings —
+read them from there rather than constructing them, and pass one as `siteUrl` on every inspect call.
+
 **Use a desktop OAuth client.** One-time setup, then a refresh token stored locally:
 
 1. Google Cloud console → new project (or reuse one).
@@ -120,6 +124,41 @@ Do not conclude "no page links here" from an empty `referringUrls` — crawl for
 | Excluded by noindex tag | `BLOCKED_BY_META_TAG` / `BLOCKED_BY_HTTP_HEADER` | Staging leftovers, or a shell served without the render path (C7) |
 | Soft 404 | `pageFetchState: SOFT_404` | A thin or empty page returning 200 (C7) |
 | Crawled – currently not indexed | — | Not technical. Say so |
+
+## Deciding "expected" from enums — measured, not inferred
+
+Live `urlInspection` responses from a healthy domain property, 2026-08-14. This is the shape to
+branch on:
+
+| URL | `verdict` | `coverageState` (display only) | `googleCanonical` |
+|---|---|---|---|
+| `https://example.com/docs/` — canonical | **PASS** | "Submitted and indexed" | itself |
+| `https://example.com/docs` — slashless twin | **NEUTRAL** | "Page with redirect" | `…/docs/` |
+| `https://example.com/old-alias` — never discovered | **NEUTRAL** | "URL is unknown to Google" | absent |
+
+**`verdict` is the signal, and it is an enum.** Google itself does not call the redirecting twin a
+failure — it returns `NEUTRAL`, not `FAIL`. So the expected-variant case is decidable without ever
+reading translated prose:
+
+```
+verdict == NEUTRAL
+  and googleCanonical is set
+  and googleCanonical != inspectionUrl
+  and inspect(googleCanonical).verdict == PASS
+      → expected. The variant redirects to a canonical that is indexed. Not a defect.
+```
+
+Two more shapes worth naming, both also enum-decidable:
+
+- `verdict == NEUTRAL` with `googleCanonical` **absent** and every state `*_UNSPECIFIED` — Google
+  has never discovered the URL. Nothing is wrong with the page; it simply is not in the index and
+  is not in any "not indexed" count either. A legacy alias nobody links to lands here.
+- `verdict == FAIL` — this is where `pageFetchState` and `indexingState` earn their place:
+  `NOT_FOUND`, `SOFT_404`, `BLOCKED_ROBOTS_TXT`, `BLOCKED_BY_META_TAG` each point at a different
+  file.
+
+Quote `coverageState` to the human — it is the string they see in the interface — and never test
+against it.
 
 ## The verdict that is usually right
 
