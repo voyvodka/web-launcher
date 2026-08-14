@@ -328,29 +328,87 @@ Attach to GitHub Release artifacts.
 
 ## 13.7 Supply-chain hardening
 
-- **npm provenance** — `npm publish --provenance` attests package built from claimed source repo at claimed commit (Sigstore-backed, free)
+- **npm provenance** — `npm publish --provenance` attests the package was built from the claimed
+  source repo at the claimed commit (Sigstore-backed, free). Still the documented flag, with two
+  conditions worth knowing (verified 2026-08-14 —
+  [generating provenance statements](https://docs.npmjs.com/generating-provenance-statements)):
+  the build must run on a cloud-hosted runner of a supported provider — **GitHub Actions or GitLab
+  CI/CD, those two only** — and `package.json` must point at a public `repository`. If you publish
+  via **trusted publishing**, provenance is generated automatically and the `--provenance` flag is
+  not needed; that is now the better path, since it also removes the long-lived npm token from CI.
+  Consumers verify with `npm audit signatures`.
 - **Lockfile discipline** — always commit, always `--frozen-lockfile` / `--immutable` in CI (fails if lockfile drifts)
 - **Pinned third-party Actions** — use commit SHA, not floating tags:
   ```yaml
-  # Good
-  uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
+  # Good — SHA, with the tag it resolved to in a trailing comment
+  uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7
   # Risky
   uses: some-user/some-action@v1
   ```
   First-party (actions/*, github/*) can stay on tags; third-party pin SHA.
-- **socket.dev** (free for public repos) — GitHub App reviews dep-change PRs for supply-chain red flags (install scripts, shell exec, network calls, typosquat). Zero config, high signal.
+
+  > The SHA previously given here (`b4ffde65…`) still resolves — but to a commit from **2023-10-17**,
+  > i.e. the `actions/checkout` v4 line, four majors behind. That is the failure mode of pinning
+  > without a bot: it keeps working and quietly stops being maintained. The SHAs above and below
+  > were resolved 2026-08-14 with `gh api repos/<owner>/<repo>/git/ref/tags/<tag>`; re-resolve
+  > rather than copying them, and let Dependabot's `github-actions` ecosystem move the pins (it
+  > rewrites SHAs and updates the trailing comment).
+  >
+  > | Action | Major tag | SHA on 2026-08-14 |
+  > |---|---|---|
+  > | `actions/checkout` | v7 | `3d3c42e5aac5ba805825da76410c181273ba90b1` |
+  > | `actions/setup-node` | v7 | `820762786026740c76f36085b0efc47a31fe5020` |
+  > | `github/codeql-action` | v4 | `988661ebb5e81487b3fb31b2185d2856c0a10679` |
+  > | `pnpm/action-setup` | v6 | `f520eceda224fe1a4aed5a2a27a194379a409996` |
+  > | `gitleaks/gitleaks-action` | v3 | `e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e` |
+
+- **socket.dev** — GitHub App reviews dep-change PRs for supply-chain red flags (install scripts,
+  shell exec, network calls, typosquat). Zero config, high signal. ⚠️ "Free for public repos" was
+  imprecise: the published Free plan is metered, not repo-visibility-scoped — unlimited repos and
+  developers but **1,000 scans/month, 3 team members**, and open-source projects are told to ask
+  for a complimentary Team account (read from [socket.dev/pricing](https://socket.dev/pricing) on
+  2026-08-14; vendor pricing is the fastest-rotting claim in this file — re-read the page before
+  quoting a number to anyone).
 - **Production install** — CI deploys with `pnpm install --prod` (skip devDeps, reduce attack surface)
 
 ## 13.8 Branch protection baseline
 
-`Settings → Branches → Add rule for main`:
+Two mechanisms exist. **Rulesets** (`Settings → Rules → Rulesets`) are the newer one; classic
+branch protection (`Settings → Branches`) still works. GitHub's own docs stop short of calling
+classic rules deprecated — the wording is that the two "work alongside each other, and all
+applicable rules are enforced" — but rulesets are what the docs describe as offering "more
+flexible ways to manage and understand protections": several can apply at once, each has an
+enforcement status (including evaluate/dry-run), and anyone with read access can see them
+(verified 2026-08-14 — [about rulesets](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/about-rulesets)).
+**Prefer a ruleset for a new repo**; don't rewrite a working classic rule just to migrate.
+
+⚠️ Availability differs from classic protection: rulesets are available on **public** repos under
+GitHub Free, and on public *and private* repos under Pro/Team/Enterprise Cloud. A private repo on
+a free plan cannot use them. Limit is 75 rulesets per repo.
+
+Whichever mechanism, the baseline is the same:
 - ☑ Require PR before merging
 - ☑ Require status checks: audit, lint, build, test
 - ☑ Require branches up to date
 - ☑ Require conversation resolution
 - ☑ Require signed commits (optional; GPG or SSH signing)
 - ☑ Restrict who can push (include admins if strict)
-- ☑ Disallow force pushes
+- ☑ Block force pushes
+
+Both REST endpoints answered on 2026-08-14, so `gh` drives either one:
+```bash
+# Rulesets — read what is already there, then inspect one
+gh api repos/OWNER/REPO/rulesets
+gh api repos/OWNER/REPO/rulesets/RULESET_ID
+
+# Classic branch protection — read (404 simply means "no protection set")
+gh api repos/OWNER/REPO/branches/main/protection
+```
+
+Writing either config from the CLI means a `PUT`/`POST` with a full JSON body — there is no
+`gh` shorthand flag for it, and a partial body **replaces** the existing settings rather than
+merging. For an audit, read with the commands above and let the user apply changes in the UI;
+that matches the plugin's propose-then-approve rule.
 
 Solo maintainers can relax to "status checks only"; still use PRs for big changes.
 

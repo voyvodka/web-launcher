@@ -2,11 +2,41 @@
 
 *Loaded by `web-launcher` SKILL for Mode B (audit & fix of an existing deployed site).*
 
-> **Not re-verified in the 2026-08-14 audit · review by 2026-10-13.** Nothing in this file was
-> checked against a current source. Treat version numbers, tokens, API shapes and vendor
-> behaviour as unverified until confirmed.
+> **Verified 2026-08-14 · review by 2026-10-13.** Claims that can rot carry their own date and
+> source inline. A claim without one has not been checked — treat it as unverified, not as fact.
 
 When user points at a deployed site and asks for improvements, run this sequence.
+
+## How this file relates to `14-diagnostic-checks.md`
+
+**This file is the workflow; `14-diagnostic-checks.md` is the instrument set.** They must not be
+read as alternatives, and where they overlap, 14 wins.
+
+| | `09` (this file) | `14-diagnostic-checks.md` |
+|---|---|---|
+| Answers | *What order do I do things in, and how do I report it?* | *Is this specific behaviour actually true on the live site?* |
+| Shape | Six ordered steps, one gap report, one handoff | Ten independent checks (C1–C10), each printing `OK` or `FAIL` |
+| Use when | Starting an audit | A probe here looks wrong and you need the cause |
+
+The probes in Step 1 and Step 1d below are **smoke tests** — deliberately shallow, fast enough to
+run on every deploy. They tell you *something is wrong*. They do not tell you *why*. The moment one
+comes back unexpected, stop and run the matching check from 14:
+
+| Symptom from this file | Run this check from `14-diagnostic-checks.md` |
+|---|---|
+| A redirect resolves, but to an error | **C1** — redirect targets must return 200 |
+| Live `robots.txt` disagrees with the repo | **C2** — edge-injection hunter |
+| apex/www redirect is `302`/`307`, not `301`/`308` | **C3** — consolidation must be permanent |
+| `hops` ≥ 1 in Step 1d | **C4** — hop count *including meta-refresh*, which `curl -L` misses |
+| Sitemap URL not 200 | **C5** |
+| Canonical mismatch | **C6** |
+| A thin `/index.html` shell served alongside `/` | **C7** |
+| `Link:` / HSTS header missing in Step 1b | **C8** — declared headers must actually be served |
+| `og:image` blank or SVG | **C9** |
+
+Nothing in Step 1d duplicates C4 by accident: Step 1d greps **source** for slashless hrefs, C4
+measures **live** hop count and catches the meta-refresh hop `curl -L` does not count. Run both —
+source drift and live chains are different defects with the same symptom.
 
 ## Step 1: Live probe (HTTP + meta harvest)
 
@@ -22,7 +52,7 @@ curl -sL --resolve DOMAIN:443:$IP "https://DOMAIN/" | \
   grep -E '<(title|meta|link rel|script type="application/ld\+json")[^>]*' | head -80
 ```
 
-## Step 1b: Agent-ready probe (2025 agentic-web signals)
+## Step 1b: Agent-ready probe (agentic-web signals)
 
 See `06-agent-ready.md` for what these signals mean.
 
@@ -43,6 +73,12 @@ curl -sI --resolve DOMAIN:443:$IP "https://DOMAIN/.well-known/http-message-signa
 ```
 
 Also run the hosted Cloudflare scanner for a UI report: `https://isitagentready.com/?url=DOMAIN`
+*(checked 2026-08-14 — live, and confirmed to be operated by Cloudflare)*. Its remediation tips are
+LLM-generated and the page says so; use them as leads and verify each against `06-agent-ready.md`
+before acting.
+
+A `grep` above that prints nothing exits non-zero — that is the finding (header or directive
+absent), not a broken pipeline. All four probes were executed as written on 2026-08-14.
 
 ## Step 1c: Repo audit (if user has local checkout)
 
@@ -100,11 +136,22 @@ The reverse case (framework set to `trailingSlash: 'never'` but internal links c
 
 Ask user to run (can't be automated without browser):
 
-- **Rich Results Test** https://search.google.com/test/rich-results → paste URL, confirm WebSite + SoftwareApplication + Organization (or whatever schemas expected) detected
-- **Schema Validator** https://validator.schema.org/
-- **OG Preview** https://www.opengraph.xyz/
-- **Is It Agent Ready** https://isitagentready.com/
-- **Lighthouse** (run yourself via `npx lighthouse` — see `11-validation-toolkit.md`)
+- **Rich Results Test** https://search.google.com/test/rich-results *(checked 2026-08-14)* → paste URL, confirm WebSite + SoftwareApplication + Organization (or whatever schemas expected) detected
+- **Schema Validator** https://validator.schema.org/ *(checked 2026-08-14)*
+- **OG Preview** https://www.opengraph.xyz/ *(checked 2026-08-14)*
+- **PageSpeed Insights** https://pagespeed.web.dev/ *(checked 2026-08-14)* → the only one-stop view of field (CrUX) and lab data together
+- **Is It Agent Ready** https://isitagentready.com/ *(checked 2026-08-14)*
+
+Run yourself, no browser needed:
+
+- **Lighthouse** — `npx lighthouse@13.4.1`, desktop *and* mobile. Mobile is the default form
+  factor: pass **no** preset for it. See `11-validation-toolkit.md` §11.3 for the full invocation
+  and for the Agentic Browsing category, which is in the standard config from Lighthouse 13.3.0.
+
+Two tools that used to sit in this list have been **removed** — do not ask the user to run them:
+Google's **Mobile-Friendly Test** is retired (its URL now redirects to the Lighthouse docs), and
+the **X/Twitter Card Validator** is login-gated and unmaintained with no official replacement. Both
+checked 2026-08-14; substitutes are in `11-validation-toolkit.md` §11.2.
 
 ## Step 3: Severity gap report
 
@@ -159,6 +206,10 @@ Repeat Step 1, Step 1b on patched paths. Confirm:
 - New meta tags show up in head harvest
 - Rich Results Test re-detects expected schemas
 - `isitagentready.com` score improves
+
+Then re-run every check from `14-diagnostic-checks.md` that failed in the gap report, and **paste
+the before and after output for each**. A fix is closed when the same command that printed `FAIL`
+prints `OK` — a described fix is not evidence of one.
 
 ## Step 6: Post-audit handoff
 
