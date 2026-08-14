@@ -2,9 +2,11 @@
 
 *Loaded by `web-launcher` SKILL when user asks "my logo doesn't show in Google" or "my brand isn't ranking #1".*
 
-> **Partially verified 2026-08-14 · review by 2026-10-13.** Only the claims carrying an inline
-> date were checked in that pass. Everything else predates it and is unverified — check before
-> relying on a version number, a token, or a vendor behaviour.
+> **Verified 2026-08-14 · review by 2026-10-13.** Claims that can rot carry their own date and
+> source inline. A claim without one has not been checked — treat it as unverified, not as fact.
+>
+> Propagation windows below are **estimates, not sourced figures** — Google publishes no timings.
+> Treat them as rough expectation-setting and say so to the user.
 
 ## Reality check (set expectations honestly before promising anything)
 
@@ -36,10 +38,16 @@
    ```
    Google uses this to consolidate entity identity.
 
-3. **Logo hygiene**:
-   - Absolute URL (`https://DOMAIN/logo.png` not `/logo.png`)
-   - PNG format 512×512+ preferred over SVG for Knowledge Panel
-   - Can be served as `/favicon.svg` AND `/logo.png` — put PNG URL in `Organization.logo`
+3. **Logo hygiene** — Google's stated requirements, verified 2026-08-14
+   ([Google — logo structured data](https://developers.google.com/search/docs/appearance/structured-data/logo)):
+   - **Minimum 112×112 px.** That is the documented floor, not a target — go larger.
+   - **The image URL must be crawlable and indexable.** A logo behind a `Disallow` or a `noindex`
+     header is the most common reason a correct-looking `Organization` block renders nothing.
+   - **Format must be one Google Images supports. SVG is not among them** — ship PNG.
+   - Absolute URL (`https://DOMAIN/logo.png`, not `/logo.png`).
+   - Google also advises checking that the logo "looks how you intend it to look on a purely white
+     background".
+   - Serving `/favicon.svg` alongside is fine — just put the PNG URL in `Organization.logo`.
 
 4. **Backlinks from authoritative sources**:
    - GitHub repo README prominently links to site with quality screenshot

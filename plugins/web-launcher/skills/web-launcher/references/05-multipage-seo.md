@@ -2,9 +2,8 @@
 
 *Loaded by `web-launcher` SKILL when site has multiple routes (docs/, blog/, marketing subpages).*
 
-> **Partially verified 2026-08-14 · review by 2026-10-13.** Only the claims carrying an inline
-> date were checked in that pass. Everything else predates it and is unverified — check before
-> relying on a version number, a token, or a vendor behaviour.
+> **Verified 2026-08-14 · review by 2026-10-13.** Claims that can rot carry their own date and
+> source inline. A claim without one has not been checked — treat it as unverified, not as fact.
 
 Single-page baseline from `03-discoverability-classic.md` is insufficient once you have routes. Every route needs its own meta + canonical + og + schema.
 
@@ -32,14 +31,21 @@ Single-page baseline from `03-discoverability-classic.md` is insufficient once y
 
 Not just root. Framework integrations:
 
-| Framework | Plugin / built-in |
-|---|---|
-| Astro | `@astrojs/sitemap` — auto from `src/pages/` |
-| Next.js | `next-sitemap` — post-build generator |
-| Hugo | Built-in — `hugo` command emits `/sitemap.xml` |
-| Eleventy | `eleventy-plugin-sitemap` |
-| SvelteKit | `svelte-sitemap` or manual endpoint |
-| Plain static | Hand-write or generate from filesystem |
+**Prefer the framework's own mechanism over a plugin.** Two of the packages this file used to
+recommend are unmaintained, and in the Next.js case the framework absorbed the feature years ago.
+
+| Framework | Use | Checked 2026-08-14 |
+|---|---|---|
+| Astro | `@astrojs/sitemap` — auto from `src/pages/` | `3.7.3`, published 2026-05-26 — maintained |
+| Next.js | **Built-in: `app/sitemap.ts`** returning a `MetadataRoute.Sitemap` array; `generateSitemaps()` to split large sites | Introduced in `v13.3.0`; localisation added in `14.2.0` ([Next.js docs](https://nextjs.org/docs/app/api-reference/file-conventions/metadata/sitemap)). **Do not add `next-sitemap`** — last published 2023-09-06 |
+| Hugo | Built-in — `hugo` emits `/sitemap.xml` | — |
+| Eleventy | Write a template that renders the collection to XML | `eleventy-plugin-sitemap` last published 2020-06-20; six years unmaintained |
+| SvelteKit | An endpoint that renders the XML, or `svelte-sitemap` | `4.0.4`, published 2026-06-30 — maintained |
+| Plain static | Hand-write or generate from the filesystem | — |
+
+npm dates above come from the registry on 2026-08-14. A generator that has not shipped in years
+is not automatically broken, but it is one framework release away from being so — and a sitemap
+that silently stops updating is invisible until Search Console reports stale URLs.
 
 ## Article schema on blog / changelog posts
 
