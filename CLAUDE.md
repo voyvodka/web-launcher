@@ -22,7 +22,7 @@ verified and the source it came from, and the plugin puts itself on a 60-day clo
 | Form | One skill: thin `SKILL.md` + on-demand references | Triggering stays in one place; progressive disclosure keeps the always-loaded part small |
 | Frontmatter | Agent Skills spec fields only | Also runs on claude.ai, Cowork, routines — portability is free here |
 | Distribution | Dual: `@skills-dir` for the maintainer, GitHub marketplace for everyone else | An installed plugin lives in a versioned cache; edits to it do not survive an update |
-| Search Console | Read-only API; auth path pending a spike | The write side is closed — see Rules |
+| Search Console | Read-only API, desktop OAuth client | The write side is closed — see Rules. ADC was rejected: it needs the gcloud SDK, which is a heavier install than one browser round |
 | Deploy target (of sites it builds) | Cloudflare Workers | Knowing one platform properly beats knowing four halfway |
 
 Reasoning in full: `docs/product/02-decisions.md`. Do not swap a component without reading the
@@ -75,7 +75,7 @@ follow one of them.
 | ID | Assumption | What breaks if wrong |
 |---|---|---|
 | V4 | Most users will not enable auto-update, so a "new version available" notice never reaches them | The freshness promise holds for the maintainer but collapses for users |
-| V5 | A `~/...` path written into skill body can be opened with a runtime `Read` | The fallback for the maintainer-only layer does not work; `userConfig` becomes the only route |
+| V6 | The maintainer file is genuinely absent from every installed copy | Maintainer instructions become visible to users, breaking the privacy requirement it exists for |
 
 Live list: `docs/product/00-state.md`.
 
