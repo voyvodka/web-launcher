@@ -66,6 +66,22 @@ To run the Worker ahead of asset serving, set `assets.run_worker_first: true`, o
 patterns for selective control
 (verified 2026-08-14 — [Routing / Worker script](https://developers.cloudflare.com/workers/static-assets/routing/worker-script/)).
 
+A second mechanism moves the same line and is easy to miss. The compatibility flag
+**`assets_navigation_prefers_asset_serving`**, default since **2025-04-01**, makes navigation
+requests (`Sec-Fetch-Mode: navigate`) prefer asset serving *even when no asset matches exactly* —
+so SPA and custom-404 fallbacks are served ahead of the Worker. Without it the old behaviour
+applies and a miss invokes the Worker. **`run_worker_first: true` overrides the flag entirely**
+(verified 2026-08-14 — [Compatibility flags](https://developers.cloudflare.com/workers/configuration/compatibility-flags/)).
+
+Consequence when debugging "my Worker does not run": check the compatibility date as well as
+`run_worker_first`. A project scaffolded after April 2025 inherits the flag silently.
+
+> **Verify before you rely on a key here.** This is the fastest-moving reference in this skill. If
+> this session can reach Cloudflare's documentation directly — a Cloudflare docs MCP server, or any
+> documentation tool — query it for the specific field before recommending it, and cite what came
+> back. It is a search, not an oracle: a query that returns nothing relevant leaves the claim
+> unverified, it does not confirm it. Nothing here depends on that tool being present.
+
 ## www → apex redirect
 
 **Recommended: a zone-level redirect rule, not a Worker.** Cloudflare's own Custom Domains page
