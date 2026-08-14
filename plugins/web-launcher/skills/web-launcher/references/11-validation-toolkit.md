@@ -138,8 +138,8 @@ Two caveats, both from Lighthouse's own category description:
 - It is scored as a **fraction**, not a 0–100 score — do not set a numeric threshold against it.
 - Lighthouse labels it *"still under development and subject to change."* Treat a regression here
   as a signal to investigate, never as a release blocker.
-- Four of its six audits target **WebMCP**, which `plugins/…/CLAUDE.md` lists as out of scope. A
-  site not shipping WebMCP will score low here by design, and that is not a defect to fix.
+- Four of its six audits target **WebMCP**, which this skill does not scaffold. A site not shipping
+  WebMCP scores low here by design; that is a scope decision, not a defect to fix.
 
 It does **not** affect Search ranking. Treat it as the lab-side companion to `isitagentready.com`
 (§11.2) and to the agent-ready signals in `06-agent-ready.md`.

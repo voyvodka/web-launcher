@@ -82,7 +82,9 @@ absent), not a broken pipeline. All four probes were executed as written on 2026
 
 ## Step 1c: Repo audit (if user has local checkout)
 
-See `13-dependency-security.md` §11.11 for rapid checklist. Quick version:
+See `13-dependency-security.md` §13.11 ("Mode B rapid checklist") for the full list — the old
+pointer to "§11.11" was a typo for a section that does not exist *(corrected 2026-08-14)*. Quick
+version:
 
 ```bash
 # Dep-bot present?
@@ -217,18 +219,26 @@ Give user:
 1. **Summary** — what was fixed, what remains, deferred items
 2. **Manual action list** — zone settings they need to change (SSL mode, Bot Fight, etc.)
 3. **Indexing acceleration** — if meta or schema changed, suggest GSC "Request Indexing" (see `12-indexing.md`)
-4. **Expected propagation** — logo-in-SERP 1-4 weeks, rich snippets 1-3 weeks, full reindex after major meta changes 2-8 weeks
+4. **Expected propagation** — ⚠️ the ranges once quoted here (logo-in-SERP 1–4 weeks, rich snippets
+   1–3 weeks, full reindex 2–8 weeks) have **no source and were not verifiable on 2026-08-14**.
+   Google publishes no such SLA and recrawl intervals vary by site. Tell the user "days to weeks,
+   and it depends on how often this site is crawled" and point them at the Search Console
+   coverage report for the actual signal — never quote a number you cannot source.
 
 ## Common Mode B findings
 
-Across every audit I've seen:
+Recurring patterns worth probing early. This is a checklist drawn from prior audits, not a ranked
+frequency table — no measurement backs an ordering, so do not present it to a user as one.
 
 - ❌ Organization schema missing → logo not in SERP Knowledge Panel
-- ❌ `Content-Signal` missing → Cloudflare scanner fails, GEO weaker
-- ❌ `Link:` headers missing → agentic-web probe fails
+- ❌ `Content-Signal` missing → agent-readiness scanner fails, GEO weaker
+- ❌ `Link:` headers missing → agentic-web probe fails. Confirm with **C8**, which distinguishes
+  "never declared" from "declared in `_headers` but not served"
 - ❌ JWKS placeholder missing → returns HTML fallback at `.well-known/http-message-signatures-directory`
-- ⚠ Multiple og:image sizes not declared — Meta debugger shows "image too small" warning
+- ⚠ `og:image` absent, SVG, or 404 → blank social card. **C9** checks every sitemap URL at once
 - ⚠ `apple-touch-icon` + `mask-icon` missing — iOS home screen generic icon
-- ⚠ Repo missing Dependabot.yml — passive CVE exposure
-- ⚠ GitHub Actions unpinned to tag — supply-chain risk
-- ⚠ Trailing-slash drift — header/footer/body/redirects/llms.txt link to slashless paths while framework forces trailing slash → every internal click is a 308. Surfaces in GSC as "Page with redirect", "Redirect error", or chronically slow indexing of sub-pages. Run §1d.
+- ⚠ Repo missing Dependabot/Renovate config — passive CVE exposure
+- ⚠ **GitHub Actions pinned to a mutable tag** (`uses: owner/action@v4`) rather than a full commit
+  SHA — a tag can be repointed at new code, so tag-pinning is the supply-chain risk. This is what
+  the Step 1c grep is looking for; a hit means "pin to SHA", not "add a tag"
+- ⚠ Trailing-slash drift — header/footer/body/redirects/llms.txt link to slashless paths while framework forces trailing slash → every internal click is a 308. Surfaces in GSC as "Page with redirect", "Redirect error", or chronically slow indexing of sub-pages. Run §1d, then **C4** for the live hop count.

@@ -414,28 +414,39 @@ Solo maintainers can relax to "status checks only"; still use PRs for big change
 
 ## 13.9 Scanner tool matrix
 
-| Tool | Free tier | Scope | Delivery |
-|---|---|---|---|
-| Dependabot | ✅ all repos | CVE alerts + auto-PR | GitHub native |
-| Renovate | ✅ all repos | Deeper config + more ecosystems | GitHub App |
-| `pnpm/yarn/npm audit` | ✅ | Node CVEs | CLI + CI |
-| socket.dev | ✅ public | Supply chain / malicious detection | GitHub App |
-| Snyk | 200 tests/mo | CVE + license + IaC | GitHub App + CLI |
-| CodeQL | ✅ public | Static analysis | GitHub Actions |
-| Gitleaks | ✅ | Secret scan | Pre-commit + CI |
-| TruffleHog | ✅ | Secret scan (deeper entropy) | Pre-commit + CI |
-| license-checker-rseidelsohn | ✅ | License audit | CLI + CI |
-| CycloneDX / Syft | ✅ | SBOM | CLI + release |
+⚠️ **The "free tier" column is the least durable thing in this file.** Vendors re-tier quietly and
+none of them announce it in a changelog you can diff. Every row was read from the vendor's own
+pricing or docs page on 2026-08-14; treat anything below as needing a re-read before it is quoted
+to a user as a commitment.
+
+| Tool | Free tier (checked 2026-08-14) | Scope | Delivery | Alive? |
+|---|---|---|---|---|
+| Dependabot | ✅ all repos | CVE alerts + auto-PR | GitHub native | current |
+| Renovate | ✅ all repos | Deeper config + more ecosystems | GitHub App | current |
+| `pnpm/yarn/npm audit` | ✅ | Node CVEs | CLI + CI | current |
+| socket.dev | ⚠️ metered: 1,000 scans/mo, 3 members, unlimited repos; OSS can request a free Team account | Supply chain / malicious detection | GitHub App | current |
+| Snyk | ⚠️ per-product monthly test counts, not one pool: **200** Open Source (SCA), **100** Code (SAST), **100** Container, **300** IaC | CVE + license + IaC | GitHub App + CLI | current |
+| CodeQL | ✅ public repos; private needs paid Code Security | Static analysis | GitHub Actions | `codeql-action` v4 |
+| Gitleaks | ✅ CLI; ⚠️ the **Action** needs `GITLEAKS_LICENSE` on org-owned repos | Secret scan | Pre-commit + CI | CLI `v8.30.1`, 2026-03-21 |
+| TruffleHog | ✅ open source | Secret scan (deeper entropy) | Pre-commit + CI | `v3.96.0`, 2026-07-24 |
+| license-checker-rseidelsohn | ✅ | License audit | CLI + CI | `5.0.1`, 2026-05-27 |
+| CycloneDX / Syft | ✅ | SBOM | CLI + release | `6.0.1` / `v1.51.0`, Aug 2026 |
+
+The old table said Snyk gave "200 tests/mo" flat — that number is only the Open Source product's
+allowance ([snyk.io/plans](https://snyk.io/plans/), read 2026-08-14). Release dates in the last
+column come from `gh api repos/<owner>/<repo>/releases/latest` and the npm registry on the same
+day; all four scanners are actively released, none are abandoned.
 
 ## 13.10 Day-1 baseline for any public repo
 
 Ship these together on repo creation or first audit pass. ~30 min total, then autopilot:
 
-1. `.github/dependabot.yml` — weekly grouped npm + actions + docker updates
-2. GitHub Settings → Code security: alerts + security updates + secret scanning + push protection all ✓
+1. `.github/dependabot.yml` — weekly grouped npm + actions + docker updates, with a `cooldown`
+2. GitHub Settings → Security → Advanced Security: alerts + security updates + secret scanning +
+   push protection (remember repository-level push protection is off by default) all ✓
 3. `.github/workflows/audit.yml` — audit + outdated + Gitleaks on PR + weekly cron
 4. Pre-commit hook: Gitleaks staged scan
-5. Branch protection on main: PR + status checks required
+5. Ruleset (or classic branch protection) on main: PR + status checks required
 6. Lockfile committed; CI uses `--frozen-lockfile`
 7. Pinned SHA on any third-party GitHub Action
 8. (Optional) socket.dev GitHub App installed
@@ -446,14 +457,15 @@ Ship these together on repo creation or first audit pass. ~30 min total, then au
 # 1. Dep-bot?
 ls .github/dependabot.yml renovate.json 2>/dev/null
 
-# 2. CI audit workflow?
-ls .github/workflows/*.yml 2>/dev/null | xargs grep -l -E "(audit|snyk|gitleaks|trufflehog)" 2>/dev/null
+# 2. CI audit workflow? (-rl also catches .yaml, and survives zero matches)
+grep -rlE "(audit|snyk|gitleaks|trufflehog)" .github/workflows/ 2>/dev/null || echo "MISSING: no audit workflow"
 
 # 3. Lockfile committed?
 ls pnpm-lock.yaml yarn.lock package-lock.json 2>/dev/null
 
-# 4. Third-party actions SHA-pinned?
-grep -rE "uses: [^a-zA-Z].*@v[0-9]" .github/workflows/ 2>/dev/null
+# 4. Third-party actions NOT SHA-pinned? (lists offenders; silence = all pinned)
+grep -rhoE "uses: [^ ]+@v[0-9][^ ]*" .github/workflows/ 2>/dev/null \
+  | grep -vE "uses: (actions|github)/" | sort -u
 
 # 5. Pending CVEs?
 pnpm audit --audit-level=moderate 2>/dev/null || npm audit --audit-level=moderate 2>/dev/null
@@ -469,6 +481,15 @@ curl -sI "https://DOMAIN/" | grep -iE "^link:" || echo "MISSING: Link headers"
 curl -sI -H "Accept: text/markdown" "https://DOMAIN/" | grep -i "^content-type: text/markdown" || echo "MISSING: Markdown-for-Agents"
 curl -sI "https://DOMAIN/.well-known/http-message-signatures-directory" | grep -i "^content-type: application/json" || echo "MISSING: Web Bot Auth JWKS"
 ```
+
+> Check 4 was rewritten on 2026-08-14 because the previous regex — `uses: [^a-zA-Z].*@v[0-9]` —
+> **matched nothing on any real workflow**: it required a non-letter immediately after `uses: `,
+> while every action reference starts with an owner name. Confirmed by running it against a
+> fixture containing two deliberately unpinned third-party actions; it exited 1 and printed
+> nothing, i.e. it reported "all pinned" for a repo that was not. The replacement lists every
+> tag-pinned action and filters out first-party `actions/*` and `github/*`, so anything printed
+> is an actual finding. Beware the inverted reading of this one: **output means a problem**,
+> silence means clean.
 
 Roll output into severity gap report:
 - 🔴 **Critical**: active CVE, secret detected, no branch protection
