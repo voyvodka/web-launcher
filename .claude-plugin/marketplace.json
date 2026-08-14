@@ -1,6 +1,6 @@
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
-  "name": "voyvodka",
+  "name": "web-launcher",
   "description": "Claude Code marketplace hosting the web-launcher plugin",
   "owner": {
     "name": "voyvodka",
