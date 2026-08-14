@@ -1,0 +1,21 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "voyvodka",
+  "description": "Claude Code marketplace hosting the web-launcher plugin",
+  "owner": {
+    "name": "voyvodka",
+    "url": "https://github.com/voyvodka"
+  },
+  "plugins": [
+    {
+      "name": "web-launcher",
+      "description": "Diagnose why a live site is not indexed, fix it, and verify the fix — plus discoverability scaffolding, Cloudflare Workers deployment, and repository hardening. Every technical claim carries its verification date and source.",
+      "author": {
+        "name": "voyvodka",
+        "url": "https://github.com/voyvodka"
+      },
+      "category": "development",
+      "source": "./plugins/web-launcher"
+    }
+  ]
+}

@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "geodaddy": {
+      "command": "npx",
+      "args": ["-y", "geodaddy-mcp"]
+    }
+  }
+}
