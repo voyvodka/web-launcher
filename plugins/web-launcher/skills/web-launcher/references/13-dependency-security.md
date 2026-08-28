@@ -4,6 +4,10 @@
 
 > **Verified 2026-08-14 · review by 2026-10-13.** Claims that can rot carry their own date and
 > source inline. A claim without one has not been checked — treat it as unverified, not as fact.
+>
+> **Partially re-verified 2026-08-28**: every version number and every pinned SHA in this file was
+> re-resolved on that date. Nothing else was re-checked — the prose, pricing and policy claims still
+> carry their 2026-08-14 stamps.
 
 Static/marketing sites still ship third-party code (framework, build tools, wrangler, satori, resvg, font packages). Dependencies rot: CVEs appear, breaking changes land, transitive deps get yanked. Automate this — manual review doesn't scale.
 
@@ -188,7 +192,7 @@ What changed since the previous major-version generation of this example:
 | `actions/setup-node` | v4 | **v7** | `v7.0.0`, 2026-07-14 |
 | `pnpm/action-setup` | v4 | **v6** | `v6.0.10`, 2026-08-03 |
 | `gitleaks/gitleaks-action` | v2 | **v3** | `v3.0.0`, 2026-05-30 |
-| `github/codeql-action` | v3 | **v4** | tag `v4.37.7` |
+| `github/codeql-action` | v3 | **v4** | tag `v4.37.9` (2026-08-26) |
 
 Three things that bite when copying an older version of this file:
 
@@ -206,8 +210,10 @@ Three things that bite when copying an older version of this file:
   - uses: pnpm/setup@v2
     with: { version: 11, runtime: node@24, cache: true }
   ```
-  `pnpm/action-setup` remains correct for pnpm v10 and older. (pnpm latest on npm: `11.21.0`,
-  2026-08-09.)
+  `pnpm/action-setup` remains correct for pnpm v10 and older. (pnpm latest on npm: `11.24.0`,
+  2026-08-26. `12.0.0` is already published on the `next-12` dist-tag as of 2026-08-26 — when it is
+  promoted to `latest`, re-check the `version: 11` in the snippet above and the v11-vs-v10 split
+  in this bullet.)
 - **gitleaks-action v3 wants `GITLEAKS_LICENSE` for organization repos**, not personal accounts —
   that is a v2-era condition that still holds, and a missing license is the usual reason the job
   fails on an org repo. v3 is otherwise a drop-in: same inputs and outputs, only the Actions runtime
@@ -304,7 +310,7 @@ syft dir:. -o spdx-json > sbom.spdx.json
 > **`npx @anchore/syft` does not work — there is no such npm package** (registry returns 404,
 > verified 2026-08-14). `@cyclonedx/cyclonedx-npm` is real and current: `6.0.1`, published
 > 2026-08-11 (same check). If only one SBOM format is needed, CycloneDX is the one with no
-> extra install step. Syft latest is `v1.51.0`, 2026-08-10.
+> extra install step. Syft latest is `v1.51.1`, 2026-08-27.
 
 Third option, zero install, if the repo is on GitHub with the dependency graph enabled — GitHub
 generates an SPDX SBOM itself:
@@ -350,16 +356,24 @@ Attach to GitHub Release artifacts.
   > The SHA previously given here (`b4ffde65…`) still resolves — but to a commit from **2023-10-17**,
   > i.e. the `actions/checkout` v4 line, four majors behind. That is the failure mode of pinning
   > without a bot: it keeps working and quietly stops being maintained. The SHAs above and below
-  > were resolved 2026-08-14 with `gh api repos/<owner>/<repo>/git/ref/tags/<tag>`; re-resolve
-  > rather than copying them, and let Dependabot's `github-actions` ecosystem move the pins (it
-  > rewrites SHAs and updates the trailing comment).
+  > were re-resolved 2026-08-28; re-resolve rather than copying them, and let Dependabot's
+  > `github-actions` ecosystem move the pins (it rewrites SHAs and updates the trailing comment).
   >
-  > | Action | Major tag | SHA on 2026-08-14 |
+  > **Dereference annotated tags or the pin is wrong.** `gh api repos/<owner>/<repo>/git/ref/tags/<tag>`
+  > returns `.object.type == "tag"` for an annotated tag, and its `.object.sha` is the *tag object*,
+  > not a commit — pinning it does not resolve. Two rows of this table were wrong for exactly that
+  > reason until 2026-08-28. Resolve in one step instead:
+  >
+  > ```bash
+  > gh api repos/<owner>/<repo>/commits/<tag> --jq .sha    # follows tag -> commit for both kinds
+  > ```
+  >
+  > | Action | Major tag | Commit SHA on 2026-08-28 |
   > |---|---|---|
   > | `actions/checkout` | v7 | `3d3c42e5aac5ba805825da76410c181273ba90b1` |
   > | `actions/setup-node` | v7 | `820762786026740c76f36085b0efc47a31fe5020` |
-  > | `github/codeql-action` | v4 | `988661ebb5e81487b3fb31b2185d2856c0a10679` |
-  > | `pnpm/action-setup` | v6 | `f520eceda224fe1a4aed5a2a27a194379a409996` |
+  > | `github/codeql-action` | v4 | `cdf488f595d80d6e07e03d4674febd5ab45fa938` |
+  > | `pnpm/action-setup` | v6 | `0977fd99725f1db4007ccb2928dbb4e90d06cc86` |
   > | `gitleaks/gitleaks-action` | v3 | `e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e` |
 
 - **socket.dev** — GitHub App reviews dep-change PRs for supply-chain red flags (install scripts,
@@ -426,16 +440,16 @@ to a user as a commitment.
 | `pnpm/yarn/npm audit` | ✅ | Node CVEs | CLI + CI | current |
 | socket.dev | ⚠️ metered: 1,000 scans/mo, 3 members, unlimited repos; OSS can request a free Team account | Supply chain / malicious detection | GitHub App | current |
 | Snyk | ⚠️ per-product monthly test counts, not one pool: **200** Open Source (SCA), **100** Code (SAST), **100** Container, **300** IaC | CVE + license + IaC | GitHub App + CLI | current |
-| CodeQL | ✅ public repos; private needs paid Code Security | Static analysis | GitHub Actions | `codeql-action` v4 |
+| CodeQL | ✅ public repos; private needs paid Code Security | Static analysis | GitHub Actions | `codeql-action` `v4.37.9` |
 | Gitleaks | ✅ CLI; ⚠️ the **Action** needs `GITLEAKS_LICENSE` on org-owned repos | Secret scan | Pre-commit + CI | CLI `v8.30.1`, 2026-03-21 |
-| TruffleHog | ✅ open source | Secret scan (deeper entropy) | Pre-commit + CI | `v3.96.0`, 2026-07-24 |
+| TruffleHog | ✅ open source | Secret scan (deeper entropy) | Pre-commit + CI | `v3.97.1`, 2026-08-24 |
 | license-checker-rseidelsohn | ✅ | License audit | CLI + CI | `5.0.1`, 2026-05-27 |
-| CycloneDX / Syft | ✅ | SBOM | CLI + release | `6.0.1` / `v1.51.0`, Aug 2026 |
+| CycloneDX / Syft | ✅ | SBOM | CLI + release | `6.0.1` / `v1.51.1`, Aug 2026 |
 
 The old table said Snyk gave "200 tests/mo" flat — that number is only the Open Source product's
 allowance ([snyk.io/plans](https://snyk.io/plans/), read 2026-08-14). Release dates in the last
-column come from `gh api repos/<owner>/<repo>/releases/latest` and the npm registry on the same
-day; all four scanners are actively released, none are abandoned.
+column come from `gh api repos/<owner>/<repo>/releases/latest` and the npm registry, re-run
+2026-08-28; all four scanners are actively released, none are abandoned.
 
 ## 13.10 Day-1 baseline for any public repo
 

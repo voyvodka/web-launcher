@@ -7,6 +7,9 @@
 >
 > This file changed substantially in that audit: two of its four headline signals turned out to
 > have **no measurable effect today**. Read the priority matrix before recommending anything here.
+>
+> **AIPREF rows re-verified 2026-08-28** and one of them reversed — see §`Content-Usage`. The rest
+> of this file still carries its 2026-08-14 stamp.
 
 Parallel to classic SEO and GEO, a new discovery layer is forming: **AI agents that programmatically consume your site** (ChatGPT tool use, Perplexity retrieval, Claude MCP servers, custom enterprise bots). Cloudflare's 2025 `isitagentready.com` scanner encodes four signals agents look for — different surface from classic crawlers.
 
@@ -98,17 +101,24 @@ For most marketing / portfolio / OSS sites: **`yes, yes, yes`** — maximum LLM 
 
 `Content-Signal` was Cloudflare's 2025 proposal. The **IETF AI Preferences WG (AIPREF)** put the same idea on the standards track as **`Content-Usage`**.
 
-> **Status, verified 2026-08-14 — worse than this file previously claimed.** The draft that
-> actually defines the robots.txt field and the HTTP header, `draft-ietf-aipref-attach-04`, is
-> **expired**: *"This Internet-Draft is no longer active."* Last revision 2025-10-28, nothing since
-> ([Datatracker](https://datatracker.ietf.org/doc/draft-ietf-aipref-attach/)). The vocabulary draft
-> `draft-ietf-aipref-vocab-06` is still active (2026-04-27), and the WG milestones for both are
-> 2026-08-31, still open ([WG charter](https://datatracker.ietf.org/wg/aipref/about/)). **No RFC
-> has been published by this working group.**
+> **Status, re-verified 2026-08-28 — this reversed since the 2026-08-14 audit.** The draft that
+> defines the robots.txt field and the HTTP header, `draft-ietf-aipref-attach`, had expired at
+> revision `-04`. It **revived**: `-05` was submitted 2026-08-19 and is an active Internet-Draft in
+> the AIPREF WG, intended status Proposed Standard, expiring 2027-02-20. The vocabulary draft
+> `draft-ietf-aipref-vocab` moved with it and is at `-07`, same expiry
+> ([Datatracker](https://datatracker.ietf.org/doc/draft-ietf-aipref-attach/), read via the
+> Datatracker API on 2026-08-28). **Still no RFC published by this working group** —
+> `std_level` is null on both documents.
 >
-> Consequence: the field name and syntax can still change. Emitting `Content-Usage` today is
-> harmless — nothing parses it — but calling it "standards-track, forward-compatible" oversells it.
-> Wait for the attach draft to revive before recommending it to anyone.
+> Consequence: the working group is alive again, but nothing has shipped. The field name and syntax
+> can still change, and **no crawler is known to parse `Content-Usage` today** — that part did not
+> change. Emitting it is harmless and is now a defensible bet rather than a dead one; still describe
+> it as an active draft, never as a ratified standard or as protection.
+>
+> ⚠️ This file's earlier "wait until the attach draft revives" advice was written against `-04` and
+> is now obsolete — the revival is the event it was waiting for. The `-05` text itself has **not**
+> been read; if you need the exact field syntax, read the draft rather than trusting the examples
+> below, which were written against `-04`.
 
 Two delivery surfaces, same vocabulary:
 
@@ -203,7 +213,7 @@ Serve at `/.well-known/http-message-signatures-directory` with `Content-Type: ap
 | `Link:` response headers | 15 min | Low | Yes — RFC 8288, universally parsed | Never |
 | Markdown-for-Agents | 30 min – 2 h | Low–Med | Yes, for agent consumers | Single-page or auth-only site |
 | `Content-Signal` in robots.txt | 5 min | 0 | **None known** — policy statement only | Fine to skip; add if stating intent matters |
-| `Content-Usage` (AIPREF) | 5 min | 0 | **None** — defining draft expired | Skip until the attach draft revives |
+| `Content-Usage` (AIPREF) | 5 min | 0 | **None known** — active draft, no crawler parses it | Fine to skip; add if stating intent matters |
 | Web Bot Auth JWKS placeholder | 10 min | Low | **None** — empty key set signs nothing | Skip unless chasing the scanner score |
 | Web Bot Auth real signing | 2 h | Low | Yes, for outbound identity | No outbound requests |
 
@@ -212,16 +222,16 @@ Markdown-for-Agents is a real content-delivery investment. The rest are declarat
 harmless, and currently inert — ship them if the user wants the scanner green or wants to state
 intent, and say which of the two you are doing.
 
-## Standards declaration — verified 2026-08-14
+## Standards declaration — AIPREF rows re-verified 2026-08-28, rest 2026-08-14
 
 | Signal | Standing | Source |
 |---|---|---|
 | **RFC 8288** — Link headers | Stable IETF standard since 2017 | Published RFC |
 | **RFC 9421** — HTTP Message Signatures | Stable IETF standard since 2024 | Published RFC |
 | **`Content-Signal`** | Cloudflare convention, **not IETF**, no crawler known to honour it | See §2 above |
-| **`Content-Usage`** (AIPREF) | Vocabulary draft active; **the attach draft that defines the syntax is expired**; no RFC published by the WG | [Datatracker](https://datatracker.ietf.org/wg/aipref/documents/) |
+| **`Content-Usage`** (AIPREF) | Both drafts active as of 2026-08-28 — `attach-05`, `vocab-07`, intended Proposed Standard, expiring 2027-02-20; **no RFC published by the WG**, no crawler known to parse it | [Datatracker](https://datatracker.ietf.org/wg/aipref/documents/) |
 | **`Accept: text/markdown`** negotiation | Emerging convention, no ratification | — |
 
 Explain this honestly if a user asks. Two of these are standards; the rest are conventions, one of
-them from a single vendor and one resting on an expired draft. Saying so costs nothing and is the
-difference between advice and salesmanship.
+them from a single vendor and one resting on an active but unratified draft. Saying so costs nothing
+and is the difference between advice and salesmanship.
