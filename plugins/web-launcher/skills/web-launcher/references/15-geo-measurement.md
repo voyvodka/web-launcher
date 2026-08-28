@@ -25,7 +25,7 @@ the user before showing a score, or the number will be read as visibility.
 
 | Path | Use when | Cost |
 |---|---|---|
-| **MCP server** — this plugin declares `geodaddy` in its `.mcp.json` | Interactive audits. The `analyze_url` tool returns a structured report the model can reason over directly | First run pulls `geodaddy-mcp` via `npx`; the wrapper then downloads the binary from GitHub releases |
+| **MCP server** — this plugin declares `geodaddy` in its `.mcp.json` | Interactive audits. The `analyze_url` tool returns a structured report the model can reason over directly | First run pulls `geodaddy-mcp@0.2.2` via `npx` — the version is **pinned** in `.mcp.json`, so a new upstream publish does not silently change what runs; the wrapper then downloads the binary from GitHub releases |
 | **CLI** — `geodaddy <URL>` | CI, scripted runs, anything reproducible. Single binary, no runtime dependency | One-time install |
 
 ```bash
