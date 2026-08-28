@@ -41,8 +41,13 @@ Take a brand kit (colors, typography, logomark SVG) and apply it across existing
    grep -rn "font-family" src/ public/ 2>/dev/null | grep -v "IBM Plex" | head -20
    ```
 
-4. **Favicon + icon suite** — see the next section. The short version: one SVG, one ICO, one PNG,
-   and the manifest. Not the eight-file set that older guides ship.
+4. **Favicon + icon suite** — see the next section. The short version: one SVG, one ICO, the
+   180×180 apple-touch PNG, and the manifest — plus whatever PNGs the manifest itself references
+   (the `site.webmanifest` below lists `icon-192`, `icon-512` and a maskable 512, so shipping that
+   manifest means generating those three too, or trimming the manifest to match). Still far short
+   of the eight-file set older guides ship, but count the manifest's entries before calling it
+   done: a manifest pointing at icons nobody generated 404s on every entry and breaks
+   add-to-home-screen.
 
 5. **OG image** — replace old OG cover with new brand mark. Regenerate via satori (see `07-og-satori.md`).
 
@@ -135,7 +140,15 @@ SVG logotypes using `<text font-family="...">` depend on the viewer having the f
 
 ## Verification checklist
 
-- [ ] No more placeholder marks (`grep -rn "brand-dot\|placeholder-logo" src/`)
+- [ ] No more placeholder marks. There is no single grep for this — the shapes listed in
+      deliverable 1 (coloured dots, avatar initials, emoji stand-ins, generic icon-library glyphs)
+      usually carry no identifying string. Search by category instead, and read the hits:
+      ```bash
+      grep -rnE 'lucide|heroicons|react-icons|@tabler/icons' src/     # generic icon imports
+      grep -rnE 'rounded-full|border-radius: *50%' src/ | grep -iE 'header|nav|logo|brand'
+      grep -rnP '[\x{1F300}-\x{1FAFF}\x{2600}-\x{27BF}]' src/       # emoji stand-ins
+      grep -rniE 'placeholder|lorem|TODO.*logo|brand-dot' src/        # only catches labelled ones
+      ```
 - [ ] All brand colors come from `:root` tokens, not hardcoded hex scattered around
 - [ ] Font stack matches brand kit in all declarations
 - [ ] Favicon renders at 16px distinguishably from neighboring browser tabs

@@ -9,6 +9,51 @@ gets an entry, because "checked on this date" is the product.
 
 ## [Unreleased]
 
+### Fixed
+
+- **`15-geo-measurement.md` misclassified `ClaudeBot` as a retrieval crawler.** Anthropic documents
+  it as the training crawler; `Claude-User` and `Claude-SearchBot` are the retrieval side. The error
+  sat inside the file's own worked example of *verifying a tool's claim against the vendor's
+  documentation*, so it undercut the section it was illustrating. The same paragraph explained
+  `Google-Extended` while the check GeoDaddy actually runs is `GoogleOther` — a generic
+  product-team crawler that is neither a training nor a retrieval control. Both corrected with
+  quoted, dated vendor sources, and the "what to do" step now runs a `curl` against the tokens that
+  genuinely decide citation.
+- **`10-brand-serp.md`'s canned user message reported work that may never have happened.** Line 3 of
+  the script stated "Requested indexing via GSC" as a completed fact, but that is a manual
+  authenticated UI action. A model pasting the script tells the user the request was made, and the
+  user then does not make it.
+- **`SKILL.md` ran a full-scope scan in Mode C.** Mode C is defined as brand-only, "without touching
+  SEO / deploy", but the scan phase was marked "all modes" and steps 4-7 inventory exactly those
+  areas — producing a gap report of unrequested work. Mode C now stops at step 3.
+- **`14-diagnostic-checks.md` C1 reported a dead host as healthy.** `curl` returns `000` when it
+  never connected; neither branch matched, so the check fell through to its OK line. Now reported as
+  an explicit unverified state. **C9 printed nothing at all on a clean site**, which the file's own
+  contract says means "the check did not run" — it now prints a counted OK line.
+- **`08-cloudflare-deploy.md` justified CSP `'unsafe-inline'` with a false premise.** Inline JSON-LD
+  needs no CSP exception: a `<script type="application/ld+json">` is a data block, and the HTML
+  spec's "prepare the script element" algorithm returns at the type step before ever reaching the
+  inline-behavior CSP check. The baseline no longer carries `'unsafe-inline'` on that basis.
+- **`01-brand-application.md` said "one SVG, one ICO, one PNG"** while the `site.webmanifest` in the
+  same file references three more PNGs — ship both verbatim and every manifest icon 404s. Its
+  verification checklist also grepped for `brand-dot|placeholder-logo`, strings that none of the
+  placeholder shapes it describes actually contain; replaced with per-category searches.
+- **`og:url` was hardcoded to the site root** in `03`'s meta template and absent from `05`'s
+  per-route override list, so every subpage of a multi-page site advertised the homepage as its
+  social target. `03` now also gives a bright line for when `05` must be loaded.
+- `06-agent-ready.md`'s section header said "ship the top two always" while its own priority matrix
+  rates signal 2 as having no known effect and being fine to skip.
+- `02-coming-soon-scaffold.md`'s skeleton loaded one font family; its typography section specifies
+  three, including the italic serif used in the skeleton's own H1.
+- `11-validation-toolkit.md`'s post-deploy step told the model to request reindexing on every
+  meaningful change, which `12-indexing.md` separately warns against for the same URL. Now scoped to
+  once per URL per content change.
+- `12-indexing.md` suggested automating IndexNow via "CF Worker on wrangler deploy event". There is
+  no such event; it is a step in the deploy pipeline.
+- `13-dependency-security.md` gave no rule for a repo already running both Dependabot and Renovate,
+  though `SKILL.md`'s pitfalls list names it. Now says how to choose and that deleting the config
+  alone does not stop Renovate.
+
 ## [0.2.0] - 2026-08-28
 
 ### Fixed

@@ -69,7 +69,7 @@ choose.
 | Check | GeoDaddy expects | This skill's position |
 |---|---|---|
 | `geo-schema-stacking` (Medium, 5 pts) | `Article` **+ `ItemList` + `FAQPage`** all present | `FAQPage` was dropped: Google removed the rich result 2026-05-07 and deleted the documentation page. See `04-geo.md`. **Following this skill costs points here.** |
-| `geo-ai-bot-*` (Critical, 10 pts each) | `GPTBot`, `ClaudeBot`, `PerplexityBot`, `GoogleOther`, `Bytespider`, `CCBot` not blocked | Right that a catch-all `Disallow` is expensive — six critical checks, 60 points. **But it conflates training crawlers with retrieval crawlers.** See below |
+| `geo-ai-bot-*` (Critical, 10 pts each) | `GPTBot`, `ClaudeBot`, `PerplexityBot`, `GoogleOther`, `Bytespider`, `CCBot` not blocked | Right that a catch-all `Disallow` is expensive — six critical checks, 60 points. **But four of the six tokens it checks are training or generic crawlers, not the retrieval crawlers that decide citation.** See below |
 | `geo-listicle` (Medium) | Numbered headings, "Top N" patterns, ordered lists, comparison tables | Reasonable as a formatting heuristic. It scores *shape*, not usefulness — do not restructure good prose into a listicle purely for this |
 
 The `FAQPage` conflict is the one that will come up. Both positions are defensible: GeoDaddy scores
@@ -93,16 +93,44 @@ OpenAI's own documentation, verified 2026-08-14
 | `ChatGPT-User` | User-initiated fetches; *"not used to determine whether content may appear in Search"* |
 
 So **blocking `GPTBot` costs you nothing in ChatGPT search** — that is `OAI-SearchBot`'s job.
-`Google-Extended` is the same shape on Google's side: training opt-out, not an indexing control.
 
-A site that allows retrieval crawlers (`OAI-SearchBot`, `ChatGPT-User`, `PerplexityBot`,
-`ClaudeBot`) while blocking training crawlers (`GPTBot`, `CCBot`, `Google-Extended`, `Bytespider`)
-holds a coherent position: *cite me, do not train on me.* GeoDaddy scores that as up to four
-critical failures.
+The same split exists for Anthropic and for Google, and the tokens are easy to mix up. Verified
+2026-08-28 against each vendor's own documentation:
+
+| Token | What it actually does | Source |
+|---|---|---|
+| `ClaudeBot` | **Training.** *"collecting web content that could potentially contribute to their training"* | [Anthropic crawler support article](https://support.claude.com/en/articles/8896518-does-anthropic-crawl-data-from-the-web-and-how-can-site-owners-block-the-crawler) |
+| `Claude-User` | User-initiated fetches — *"When individuals ask questions to Claude, it may access websites using a Claude-User agent"* | same |
+| `Claude-SearchBot` | **Search.** *"navigates the web to improve search result quality for users"* | same |
+| `Google-Extended` | **Training + grounding opt-out** for Gemini/Vertex. *"does not impact a site's inclusion in Google Search nor is it used as a ranking signal"* | [Google crawler docs](https://developers.google.com/search/docs/crawling-indexing/google-common-crawlers) |
+| `GoogleOther` | **Neither.** A generic agent *"used by various product teams for fetching publicly accessible content… one-off crawls for internal research and development"* | same |
+
+Two things follow, and GeoDaddy gets both wrong:
+
+- **`ClaudeBot` is the training crawler, not the retrieval one.** Allowing it does not make a site
+  citable in Claude; that is `Claude-SearchBot` and `Claude-User`. A site that blocks `ClaudeBot`
+  and allows those two is opted out of training and fully available for citation — GeoDaddy scores
+  it as a failure anyway.
+- **`GoogleOther` is not a training control at all**, so blocking it neither protects the site from
+  training use nor costs it Search visibility. The Gemini training opt-out is `Google-Extended`,
+  which GeoDaddy does not check.
+
+A site that allows retrieval crawlers (`OAI-SearchBot`, `ChatGPT-User`, `Claude-SearchBot`,
+`Claude-User`, `PerplexityBot`) while blocking training crawlers (`GPTBot`, `ClaudeBot`, `CCBot`,
+`Google-Extended`, `Bytespider`) holds a coherent position: *cite me, do not train on me.* GeoDaddy
+scores exactly that as multiple critical failures, because it checks the training tokens and calls
+them citation blockers.
 
 **What to do:** report the lost points, state that the failures are a stated policy rather than a
-misconfiguration, and check the one that genuinely matters — is `OAI-SearchBot` allowed? If it is,
-ChatGPT visibility is intact regardless of the score. Only recommend unblocking training crawlers
+misconfiguration, and then check the tokens that actually decide citation — none of which GeoDaddy
+scores. Run:
+
+```bash
+curl -s https://DOMAIN/robots.txt | grep -iE 'OAI-SearchBot|ChatGPT-User|Claude-SearchBot|Claude-User|PerplexityBot'
+```
+
+No `Disallow` against those means citation visibility is intact regardless of the score. Report that
+result, not the score, when the user asks whether they are visible to AI search. Only recommend unblocking training crawlers
 if the user actually wants to be trained on, and say that is what the change means.
 
 Bytespider is a related case: GeoDaddy treats blocking it as critical, while `03-discoverability-classic.md`

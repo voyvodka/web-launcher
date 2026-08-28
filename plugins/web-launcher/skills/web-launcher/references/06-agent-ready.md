@@ -15,7 +15,12 @@ Parallel to classic SEO and GEO, a new discovery layer is forming: **AI agents t
 
 **Hosted readiness check**: `https://isitagentready.com/?url=YOUR_DOMAIN`
 
-## 4 signals (in priority order — ship the top two always)
+## 4 signals (in priority order)
+
+**Only signal 1 is "always".** `Link:` headers are ratified and actually parsed; the priority matrix
+near the end of this file rates its *Skip if* as "Never". The other three are governed by that
+matrix, and two of them have no known technical effect today — ship them when the user wants to
+state intent or wants a scanner green, and say which of the two you are doing.
 
 ### 1. `Link:` response headers (RFC 8288)
 

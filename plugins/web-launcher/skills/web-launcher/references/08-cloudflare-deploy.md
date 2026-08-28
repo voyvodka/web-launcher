@@ -170,9 +170,19 @@ Notes:
   directive**; the Topics API opt-out is `browsing-topics=()`
   (verified 2026-08-14 — [MDN Permissions-Policy](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Permissions-Policy)).
   Sites still shipping `interest-cohort=()` are sending a header nothing reads.
-- `'unsafe-inline'` in `script-src` allows inline JSON-LD. Note that if Bot Fight Mode is ever
-  turned on, Cloudflare injects challenge scripts and the docs "highly discourage the use of
-  `unsafe-inline`", recommending CSP nonces instead (see zone settings below).
+- **`'unsafe-inline'` in `script-src` is not needed for JSON-LD, and the baseline above should not
+  carry it on that basis.** A `<script type="application/ld+json">` block is a *data block*: the
+  HTML spec's "prepare the script element" algorithm returns at the type-matching step
+  ("Otherwise, return. No script is executed") long before it reaches the CSP inline check further
+  down the same algorithm (verified 2026-08-28 —
+  [HTML spec, prepare the script element](https://html.spec.whatwg.org/multipage/scripting.html#prepare-the-script-element)).
+  Structured data works under `script-src 'self'` with no exception at all.
+
+  Drop `'unsafe-inline'` unless the site has real inline JavaScript. Keeping it "for JSON-LD" buys
+  nothing and leaves the door open for the next contributor's inline handler. If Bot Fight Mode is
+  turned on, Cloudflare injects challenge scripts and its own docs "highly discourage the use of
+  `unsafe-inline`", recommending nonces instead (see zone settings below) — so that branch does not
+  justify it either.
 - Google Fonts requires explicit `fonts.googleapis.com` (style) + `fonts.gstatic.com` (font).
 - To keep the free `workers.dev` URL out of search results, the docs give this rule
   (verified 2026-08-14 — same page):

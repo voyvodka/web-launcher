@@ -5,7 +5,14 @@
 > **Verified 2026-08-14 · review by 2026-10-13.** Claims that can rot carry their own date and
 > source inline. A claim without one has not been checked — treat it as unverified, not as fact.
 
-Every site gets these files + meta tags. Templates below. See `04-geo.md` for GEO extensions, `05-multipage-seo.md` for multi-page, `06-agent-ready.md` for 2025 agent-ready signals.
+Every site gets these files + meta tags. Templates below. See `04-geo.md` for GEO extensions,
+`06-agent-ready.md` for 2025 agent-ready signals.
+
+**Load `05-multipage-seo.md` as well the moment the site has more than one indexable URL** — more
+than one entry in `sitemap.xml`, or more than one file in `src/pages/` (or the framework's
+equivalent). That is the bright line; it is not a judgement about whether the site "feels" like a
+multi-page site. A two-page site needs per-route canonical and `og:url` exactly as much as a
+fifty-page one, and the meta template below is written for the single-page case.
 
 ## `robots.txt`
 
@@ -226,12 +233,12 @@ Validate after deploy with:
 <meta name="author" content="NAME" />
 <meta name="format-detection" content="telephone=no" />
 <link rel="author" href="/humans.txt" />
-<link rel="canonical" href="https://DOMAIN" />
+<link rel="canonical" href="https://DOMAIN" />              <!-- per-route on multi-page: see 05 -->
 
 <meta property="og:type" content="website" />
 <meta property="og:title" content="PROJECT — tagline" />
 <meta property="og:description" content="…" />
-<meta property="og:url" content="https://DOMAIN" />
+<meta property="og:url" content="https://DOMAIN" />          <!-- per-route on multi-page: see 05 -->
 <meta property="og:site_name" content="PROJECT" />
 <meta property="og:locale" content="en_US" />
 <meta property="og:image" content="https://DOMAIN/og-cover.png" />
