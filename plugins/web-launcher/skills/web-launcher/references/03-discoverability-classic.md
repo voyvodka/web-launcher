@@ -198,7 +198,7 @@ Typical triad for software / marketing projects, in `<head>`:
       "@id": "https://DOMAIN/#org",
       "name": "MAINTAINER_NAME",
       "url": "https://MAINTAINER_URL",
-      "logo": "https://DOMAIN/favicon.svg",
+      "logo": "https://DOMAIN/logo.png",
       "sameAs": [
         "https://github.com/USER",
         "https://twitter.com/USER",
@@ -223,7 +223,11 @@ Validate after deploy with:
 <meta name="theme-color" content="#HEX" />
 
 <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-<link rel="apple-touch-icon" href="/favicon.svg" />
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+<!-- These two are PNG on purpose and must not be switched to favicon.svg:
+     apple-touch-icon is not rendered from SVG by iOS, and Google's Organization.logo
+     must be a raster image to appear in the Knowledge Panel. `01-brand-application.md`
+     and `10-brand-serp.md` carry the sourced versions of both claims. -->
 <link rel="mask-icon" href="/favicon.svg" color="#ACCENT" />
 
 <meta name="application-name" content="PROJECT" />

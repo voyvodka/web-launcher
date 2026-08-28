@@ -11,6 +11,43 @@ gets an entry, because "checked on this date" is the product.
 
 ### Fixed
 
+- **C1 passed a direct 404.** Yesterday's fix added the `000` no-response branch but left the gap
+  underneath it: a path that 404s without ever redirecting matched no branch, so `fail` stayed 0 and
+  the check printed `OK redirect targets resolve to 200`. Only an explicit `200` at the end of the
+  chain is a pass now. **C5 printed success on a sitemap that never downloaded** — zero URLs read is
+  reported as "check did not run", not as a clean site. **C7** gained the same guard.
+- **The baseline `wrangler.jsonc` shipped an SPA fallback to every site.**
+  `not_found_handling: "single-page-application"` turns any unknown route on a multi-page site into a
+  200 serving the homepage — a soft 404 that C1 cannot catch either, because the response genuinely
+  is 200. Now tied to the site shape the scan phase already establishes.
+- **`03`'s meta template contradicted `01` and `10` on icon format**, using `favicon.svg` for
+  `apple-touch-icon` and `Organization.logo` where the other two files say, with sources, that both
+  must be raster. Copying the template shipped an apple-touch-icon iOS will not render and a logo
+  Google will not put in the Knowledge Panel.
+- **The README promised a POSIX shell and the checks were bash-only.** Two blocks used process
+  substitution. Rewritten; all 11 blocks in `14-diagnostic-checks.md` and every block in `09` and
+  `11` now pass `dash -n` as well as `bash -n`, so the promise is true rather than softened.
+- **`pnpm audit … || npm audit …` ran both scanners.** Audit tools exit non-zero when they *find*
+  something, so the fallback fired on a real vulnerability and ran the second scanner against the
+  wrong lockfile. Replaced with `packageManager`-then-lockfile detection running exactly one, `bun`
+  included.
+- `09-audit-workflow.md` ended a step with "Commit logically", which is a git mutation the rest of
+  the skill does not authorise. Commit, push, deploy, cache purge, sitemap submit and DNS changes now
+  each need their own approval, named — approval to apply a change is not approval to publish it.
+
+### Changed
+
+- `16-search-console.md` now defaults to the `webmasters.readonly` scope. The read-write scope buys
+  exactly one operation, `sitemaps.submit`, and a token that can submit can submit by accident.
+  Widening it requires the user to have asked, and the sitemap URL confirmed immediately before the
+  call. The file also states up front that it is a procedure, not shipped client code — there is no
+  OAuth handler or API client in this plugin and there is not meant to be.
+- `14-diagnostic-checks.md` notes that C5, C7 and C9 request URLs taken from fetched content
+  (sitemap `<loc>`, `og:image`), so against a site you do not control those values decide what your
+  machine connects to.
+
+### Fixed
+
 - **`15-geo-measurement.md` misclassified `ClaudeBot` as a retrieval crawler.** Anthropic documents
   it as the training crawler; `Claude-User` and `Claude-SearchBot` are the retrieval side. The error
   sat inside the file's own worked example of *verifying a tool's claim against the vendor's

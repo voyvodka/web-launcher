@@ -25,6 +25,14 @@ hop", "no duplicates", "returns 404" — the check that proves it belongs in the
 
 ## How to use these
 
+> **The URLs in C5, C7 and C9 come out of fetched content, not from you.** Sitemap `<loc>` entries
+> and `og:image` values are whatever the site returned. On a site you fully control that is fine.
+> When auditing a site you do not — a client's, one with user-generated content, a compromised CMS —
+> those values can point at `localhost`, a LAN address or a cloud metadata endpoint, and these checks
+> will dutifully request them from your machine. Nothing is exfiltrated (the status code prints to
+> your own terminal), but do not run them against an untrusted origin from inside a network where
+> reachability itself is information. Skim the sitemap first; it takes ten seconds.
+
 All read-only. Set `BASE` to the canonical origin, with no trailing slash:
 
 ```bash
@@ -52,13 +60,18 @@ check_redirect_targets() {
   for p in "$@"; do
     first=$(curl -sI --max-time 15 -o /dev/null -w '%{http_code}' "$base$p")
     final=$(curl -sIL --max-time 20 -o /dev/null -w '%{http_code}' "$base$p")
-    # curl prints 000 when it never got a response at all — DNS, TLS or timeout.
-    # Without this branch that falls through to the OK line and reports a dead host as healthy.
+    # Only an explicit 200 at the end of the chain is a pass. Everything else is named.
+    # Two ways this check used to lie: curl prints 000 when it never got a response at all
+    # (DNS, TLS, timeout), and a path that 404s directly — never a redirect — matched no
+    # branch at all. Both fell through to the OK line.
     if [ "$first" = "000" ] || [ "$final" = "000" ]; then
       echo "?    $p  no response (dns/tls/timeout) — not checked"
       fail=1
     elif [ "$first" -ge 300 ] && [ "$first" -lt 400 ] && [ "$final" -ge 400 ]; then
       echo "FAIL $p  $first -> final $final (redirect leads to an error)"
+      fail=1
+    elif [ "$final" != "200" ]; then
+      echo "FAIL $p  $first -> final $final (not 200)"
       fail=1
     fi
   done
@@ -82,9 +95,16 @@ robots.txt" features prepend their own block, and their block can invert what th
 declares.
 
 ```bash
-diff <(curl -s --max-time 20 "$BASE/robots.txt") ./public/robots.txt \
-  && echo "OK   robots.txt matches repo" \
-  || echo "FAIL live robots.txt differs from repo — edge injection or stale deploy"
+# Written with a temp file rather than `diff <(...)`, which is bash-only.
+live=$(mktemp); curl -s --max-time 20 "$BASE/robots.txt" > "$live"
+if [ ! -s "$live" ]; then
+  echo "?    live robots.txt is empty or unreachable — not checked"
+elif diff "$live" ./public/robots.txt; then
+  echo "OK   robots.txt matches repo"
+else
+  echo "FAIL live robots.txt differs from repo — edge injection or stale deploy"
+fi
+rm -f "$live"
 
 curl -s --max-time 20 "$BASE/robots.txt" | grep -qi 'managed content' \
   && echo "FAIL a CDN is injecting a managed robots.txt block"
@@ -149,12 +169,23 @@ sitemap listing a redirecting URL is the site contradicting its own canonical ch
 
 ```bash
 sitemap_all_200() {
-  local sm="$1" fail=0
-  while read -r u; do
-    code=$(curl -sI --max-time 15 -o /dev/null -w '%{http_code}' "$u")
-    [ "$code" = "200" ] || { echo "FAIL $u -> $code (listed in sitemap, not 200)"; fail=1; }
-  done < <(curl -s --max-time 30 "$sm" | grep -o '<loc>[^<]*</loc>' | sed -e 's|<loc>||g' -e 's|</loc>||g')
-  [ "$fail" -eq 0 ] && echo "OK   all sitemap URLs return 200"
+  sm="$1"
+  # A pipe into `while` runs the loop in a subshell, so counters go to a file.
+  # Written this way rather than `done < <(...)`, which is bash-only.
+  tmp=$(mktemp); printf '0 0' > "$tmp"
+  curl -s --max-time 30 "$sm" | grep -o '<loc>[^<]*</loc>' | sed -e 's|<loc>||g' -e 's|</loc>||g' \
+  | while read -r u; do
+      read -r n bad < "$tmp"; n=$((n+1))
+      code=$(curl -sI --max-time 15 -o /dev/null -w '%{http_code}' "$u")
+      [ "$code" = "200" ] || { echo "FAIL $u -> $code (listed in sitemap, not 200)"; bad=$((bad+1)); }
+      printf '%s %s' "$n" "$bad" > "$tmp"
+    done
+  read -r n bad < "$tmp"; rm -f "$tmp"
+  # Zero URLs is not a pass. The sitemap may have 404'd, timed out, or parsed to nothing —
+  # printing OK here is how a missing sitemap gets reported as a healthy one.
+  if   [ "$n" -eq 0 ];   then echo "?    0 URLs read from $sm — sitemap missing, empty or unparseable"
+  elif [ "$bad" -eq 0 ]; then echo "OK   all $n sitemap URLs return 200"
+  fi
 }
 
 # Resolve the real sitemap first — robots.txt names it, and it is often not /sitemap.xml.
@@ -183,8 +214,11 @@ canonical_matches() {
   done
 }
 
-curl -s "$BASE/sitemap.xml" | grep -o '<loc>[^<]*</loc>' \
-  | sed -e 's|<loc>||g' -e 's|</loc>||g' | while read -r u; do canonical_matches "$u"; done
+n=0
+for u in $(curl -s "$BASE/sitemap.xml" | grep -o '<loc>[^<]*</loc>' | sed -e 's|<loc>||g' -e 's|</loc>||g'); do
+  canonical_matches "$u"; n=$((n+1))
+done
+[ "$n" -eq 0 ] && echo "?    0 URLs read from sitemap.xml — check did not run"
 ```
 
 ## C7 — Shell leak: an SSR-less thin copy served at a real URL

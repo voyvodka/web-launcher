@@ -6,6 +6,12 @@ mentions Search Console, "not indexed", "not appearing in Google", or a coverage
 > **Verified 2026-08-14 · review by 2026-10-13.** Endpoint surface, field names, enum values and
 > quotas were read from Google's API reference. Claims marked ⚠️ could not be confirmed against a
 > primary source and say why.
+>
+> **This file is a procedure, not shipped code.** There is no OAuth handler, no token store and no
+> API client in this plugin, and there is not meant to be. It documents the endpoint surface and the
+> one-time setup so the agent reading it can drive the API with whatever HTTP client the session
+> already has. If you were looking for an integration to run, this is not one — and nothing else in
+> the plugin depends on there being one.
 
 ## The four walls — read these before promising anything
 
@@ -42,6 +48,15 @@ bug. ⚠️ (guidance is from talks and office hours; not in written documentati
 *"Your application must use OAuth 2.0 to authorize requests. No other authorization protocols are
 supported."* Scopes: `.../auth/webmasters` (read-write, needed for `sitemaps.submit`) and
 `.../auth/webmasters.readonly`.
+
+**Default to `webmasters.readonly`.** Everything this file is loaded for — reading index status,
+reconstructing the candidate set, mapping a coverage reason to its cause — is a read. The
+read-write scope buys exactly one operation, `sitemaps.submit`, and a token that can submit is a
+token that can submit by accident: a sitemap URL is a production input to how Google crawls the
+site, and the mistake is not visible until it is indexed. Ask for the wider scope only when the
+user has asked for a sitemap submission specifically, and **confirm the exact sitemap URL with them
+immediately before the call** — approval of "audit my site" is not approval to write to it. Say
+which scope you are using when you set the integration up.
 
 **A domain property is named `sc-domain:example.com`** in the API, not as a URL. URL-prefix
 properties are named by their URL with the trailing slash. `sites.list` returns the exact strings —

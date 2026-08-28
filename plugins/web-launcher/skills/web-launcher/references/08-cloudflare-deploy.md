@@ -28,7 +28,7 @@ the older `[site]` product, not Pages.)
   "assets": {
     "directory": "./deploy",
     "binding": "ASSETS",
-    "not_found_handling": "single-page-application"
+    "not_found_handling": "single-page-application"   // ONLY for a real single-page app — see below
   },
   "routes": [
     { "pattern": "DOMAIN", "custom_domain": true }
@@ -44,7 +44,7 @@ Field notes (verified 2026-08-14 — [Wrangler configuration](https://developers
 | `compatibility_date` | Required, `yyyy-mm-dd`. Set to the day you scaffold |
 | `assets.directory` | Folder of static assets to serve |
 | `assets.binding` | Only needed if a Worker script calls `env.ASSETS.fetch()`. A purely static site needs no `main` and no binding |
-| `assets.not_found_handling` | `"single-page-application"` \| `"404-page"` \| `"none"` — **default `"none"`** |
+| `assets.not_found_handling` | `"single-page-application"` \| `"404-page"` \| `"none"` — **default `"none"`**. Pick from the shape found in SKILL.md scan step 2, do not copy the baseline blindly: `"single-page-application"` only for a client-routed SPA, `"404-page"` for a multi-page site (docs, blog, marketing subpages) that ships a `404.html`, `"none"` otherwise. On a multi-page site the SPA value turns every mistyped or removed route into a **200 serving the homepage** — a soft 404. Google reports those as "Duplicate without user-selected canonical" or indexes the homepage under the wrong URL, and `14-diagnostic-checks.md` C1 will not flag it either, because the response genuinely is 200. |
 | `assets.html_handling` | `"auto-trailing-slash"` (default) \| `"force-trailing-slash"` \| `"drop-trailing-slash"` \| `"none"` |
 | `assets.run_worker_first` | `boolean` or an array of route patterns (negation with `!` supported). Array form needs Wrangler ≥ 4.20.0 |
 | `routes[].custom_domain` | `true` → Cloudflare creates the DNS records and issues certificates for you |

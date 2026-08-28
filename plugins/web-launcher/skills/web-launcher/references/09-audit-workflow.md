@@ -93,14 +93,21 @@ ls .github/dependabot.yml renovate.json 2>/dev/null
 # CI audit workflow?
 ls .github/workflows/*.yml 2>/dev/null | xargs grep -l -E "(audit|snyk|gitleaks)" 2>/dev/null
 
-# Lockfile?
-ls pnpm-lock.yaml yarn.lock package-lock.json 2>/dev/null
+# Which package manager? package.json's packageManager field wins, lockfile is the fallback.
+grep -o '"packageManager"[^,]*' package.json 2>/dev/null
+ls pnpm-lock.yaml yarn.lock package-lock.json bun.lock bun.lockb 2>/dev/null
 
 # Third-party actions pinned to SHA?
 grep -rE "uses: [^a-zA-Z].*@v[0-9]" .github/workflows/ 2>/dev/null
 
-# Pending CVEs?
-pnpm audit --audit-level=moderate 2>/dev/null || npm audit --audit-level=moderate 2>/dev/null
+# Pending CVEs? Run the ONE that matches the project.
+# Not `pnpm audit || npm audit` — audit tools exit non-zero when they FIND something, so the
+# fallback fires on a real vulnerability and runs the second scanner against the wrong lockfile.
+if   [ -f pnpm-lock.yaml ]; then pnpm audit --audit-level=moderate
+elif [ -f yarn.lock ];      then yarn npm audit --severity moderate
+elif [ -f bun.lock ] || [ -f bun.lockb ]; then bun audit
+else                             npm audit --audit-level=moderate
+fi
 ```
 
 ## Step 1d: Internal-link canonicalization audit (catches trailing-slash drift)
@@ -199,7 +206,13 @@ Fix group C: new files
   - /.well-known/http-message-signatures-directory (JWKS placeholder)
 ```
 
-Get approval per group before writing. Apply changes. Commit logically.
+Get approval per group before writing. Apply changes.
+
+**Approval to apply is not approval to commit, deploy, or publish.** Ask separately, and name the
+operation, before any of: `git commit` or `git push`, a `wrangler deploy`, a cache purge, a sitemap
+submission, or a DNS change. These leave the working tree and are not all reversible — a purge and a
+submitted sitemap cannot be taken back at all. Offer the diff and let the user run the commit
+themselves if they prefer; that is often the right answer for a repository this skill does not own.
 
 ## Step 5: Re-validate
 
