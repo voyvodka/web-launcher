@@ -3,7 +3,12 @@
 docs/
 
 # Maintainer-only instructions. Absent from every clone and every install, by design.
-plugins/web-launcher/skills/web-launcher/references/local/
+#
+# Path-independent on purpose. The sibling repo had this rule pinned to a literal path,
+# and a directory rename stopped it matching — silently, with no error, putting private
+# files one `git add -A` away from a public commit. An ignore rule a rename can switch
+# off is not an ignore rule.
+**/references/local/
 
 .DS_Store
 node_modules/

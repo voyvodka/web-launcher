@@ -9,6 +9,16 @@ gets an entry, because "checked on this date" is the product.
 
 ## [Unreleased]
 
+### Fixed
+
+- **The `.gitignore` rule protecting `references/local/` was pinned to a literal path.** The sibling
+  repository had the same shape of rule, and a directory rename stopped it matching — silently, with
+  no error — putting maintainer-only files one `git add -A` away from a public commit. Nothing
+  leaked here, but the rule was one `git mv` from the same failure. It is now
+  `**/references/local/`, and CI asserts that nothing under `references/local/` or `docs/` is
+  tracked. This plugin tells every repo it audits that a written rule is not a check; the rule that
+  keeps its own maintainer notes private is now checked.
+
 ## [0.3.0] - 2026-08-28
 
 ### Fixed
