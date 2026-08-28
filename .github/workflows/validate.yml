@@ -22,6 +22,19 @@ jobs:
       - name: Validate plugin manifest, skills and commands
         run: npx --yes @anthropic-ai/claude-code@latest plugin validate plugins/web-launcher --strict
 
+      # The sibling repo had its ignore rule pinned to a literal path; a directory rename
+      # stopped it matching and private files landed in a commit. This asserts the rule
+      # here is doing its job rather than trusting that it is.
+      - name: No maintainer-only or product docs may be tracked
+        run: |
+          tracked=$(git ls-files | grep -E 'references/local/|^docs/' || true)
+          if [ -n "$tracked" ]; then
+            echo "::error::files that must never be published are tracked:"
+            echo "$tracked"
+            exit 1
+          fi
+          echo "ok: nothing under references/local/ or docs/ is tracked"
+
       - name: Every capability-index row must point at a file that exists
         run: |
           cd plugins/web-launcher/skills/web-launcher
