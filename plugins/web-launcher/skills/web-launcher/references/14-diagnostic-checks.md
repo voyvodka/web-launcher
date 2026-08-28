@@ -142,7 +142,14 @@ hop while actually being two. Framework-level `redirects` maps often emit exactl
 
 ```bash
 hop_count() {
-  local u="$1" hops final
+  local u="$1" hops final code
+  code=$(curl -sIL --max-time 20 -o /dev/null -w '%{http_code}' "$u")
+  # Without this, an unreachable host returns 0 redirects and reads as a clean single hop —
+  # the same 000 trap C1 carries. A dead alias is exactly what this check exists to find.
+  if [ "$code" = "000" ]; then
+    echo "?    $u  no response (dns/tls/timeout) — not checked"
+    return 1
+  fi
   hops=$(curl -sIL --max-time 20 -o /dev/null -w '%{num_redirects}' "$u")
   final=$(curl -sIL --max-time 20 -o /dev/null -w '%{url_effective}' "$u")
   if curl -s --max-time 15 "$final" | grep -qi 'http-equiv="refresh"'; then
@@ -229,10 +236,16 @@ body, frequently no canonical and `index,follow`.
 
 ```bash
 shell_leak_check() {
-  local base="$1" root_size idx_code idx_size body
+  local base="$1" root_code root_size idx_code idx_size body
+  root_code=$(curl -sI --max-time 20 -o /dev/null -w '%{http_code}' "$base/")
   root_size=$(curl -s --max-time 20 "$base/" | wc -c)
   idx_code=$(curl -sI --max-time 15 -o /dev/null -w '%{http_code}' "$base/index.html")
   idx_size=$(curl -s --max-time 20 "$base/index.html" | wc -c)
+  # A dead origin makes every size 0 and every code 000, which reads as "no leak".
+  if [ "$root_code" = "000" ] || [ "$idx_code" = "000" ] || [ "$root_size" -eq 0 ]; then
+    echo "?    $base  origin did not respond — not checked"
+    return 1
+  fi
   if [ "$idx_code" = "200" ] && [ "$idx_size" -lt $((root_size / 4)) ]; then
     echo "FAIL $base/index.html returns 200 at $idx_size bytes (root: $root_size) — SSR bypassed"
     body=$(curl -s --max-time 15 "$base/index.html")
