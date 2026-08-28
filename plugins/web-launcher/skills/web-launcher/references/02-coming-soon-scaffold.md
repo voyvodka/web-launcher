@@ -54,7 +54,9 @@ responses your Worker code generates (verified 2026-08-14 —
 <!-- full meta + OG + twitter + JSON-LD: see 03-discoverability-classic.md -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=PRIMARY_FONT:wght@400;500;600&display=swap" rel="stylesheet">
+<!-- One request, every family the Typography section below uses. Loading only PRIMARY_FONT
+     leaves the <em> in the H1 and the mono eyebrow falling back to system fonts. -->
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&family=Instrument+Serif:ital@1&display=swap" rel="stylesheet">
 <style>
   /* Inline CSS — everything the page needs */
   :focus-visible { outline: 2px solid #ACCENT; outline-offset: 3px; }

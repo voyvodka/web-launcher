@@ -45,7 +45,13 @@ Read the project context and pick a mode before proposing work:
 
 If ambiguous, ask once, then lock the mode.
 
-## Scan phase (all modes — do this before proposing anything)
+## Scan phase (do this before proposing anything)
+
+**Mode C stops at step 3.** Steps 4-8 inventory discoverability, deploy and repo hardening — the
+three areas Mode C's own definition excludes. Scanning them produces a gap report full of work the
+user did not ask for, and a gap report is a proposal whatever it is called. In Mode C, scan steps
+1-3, report only brand findings, and mention the rest in a single line at most ("I also noticed the
+site has no sitemap — say the word and I'll look at it separately"). Modes A and B run all eight.
 
 1. **Stack** — plain HTML, Astro, Next.js, Vite, Hugo, SvelteKit, Eleventy, etc. Read `package.json` and root files.
 2. **Shape** — single-page (coming-soon, landing) vs multi-page (docs, blog, marketing subpages). Count routes in `src/pages/` or equivalent.
@@ -63,7 +69,9 @@ Then write a **severity-ranked gap report**:
 - 🟢 **Nice**: llms.txt, humans.txt, apple-touch-icon, mask-icon, HSTS preload, additional schema types (Article/Breadcrumb/Product), Markdown-for-Agents, SBOM, socket.dev, pre-commit secret scan
 - ⚪ **Intent only — no known technical effect** (say so when proposing): `Content-Signal`, `Content-Usage` (AIPREF), empty Web Bot Auth JWKS. Free to add, but never present them as protection or as a ranking factor — see `06-agent-ready.md`
 
-Get user approval on the plan before executing. Work in phases (brand → discoverability → deploy → harden → validate), report back between phases.
+Get user approval on the plan before executing. Work in phases (brand → discoverability → deploy →
+harden → validate), report back between phases. **Mode C is the brand phase and nothing else** —
+finishing it means the run is done, not that discoverability comes next.
 
 ## Capability index — load references on demand
 

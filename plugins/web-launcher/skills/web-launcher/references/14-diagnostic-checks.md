@@ -52,7 +52,12 @@ check_redirect_targets() {
   for p in "$@"; do
     first=$(curl -sI --max-time 15 -o /dev/null -w '%{http_code}' "$base$p")
     final=$(curl -sIL --max-time 20 -o /dev/null -w '%{http_code}' "$base$p")
-    if [ "$first" -ge 300 ] && [ "$first" -lt 400 ] && [ "$final" -ge 400 ]; then
+    # curl prints 000 when it never got a response at all — DNS, TLS or timeout.
+    # Without this branch that falls through to the OK line and reports a dead host as healthy.
+    if [ "$first" = "000" ] || [ "$final" = "000" ]; then
+      echo "?    $p  no response (dns/tls/timeout) — not checked"
+      fail=1
+    elif [ "$first" -ge 300 ] && [ "$first" -lt 400 ] && [ "$final" -ge 400 ]; then
       echo "FAIL $p  $first -> final $final (redirect leads to an error)"
       fail=1
     fi
@@ -236,16 +241,34 @@ Assert one line per declaration in `_headers`. A declaration nobody checks is a 
 not render.
 
 ```bash
+# The pipeline runs in a subshell, so the counters are written to a file rather than
+# to shell variables — otherwise they are lost when the `while` loop exits.
+tmp=$(mktemp); printf '0 0' > "$tmp"
 curl -s "$BASE/sitemap.xml" | grep -o '<loc>[^<]*</loc>' \
   | sed -e 's|<loc>||g' -e 's|</loc>||g' | while read -r u; do
+      read -r n bad < "$tmp"; n=$((n+1))
       og=$(curl -s --max-time 15 "$u" | grep -oiE '<meta property="og:image" content="[^"]*"' \
            | sed 's/.*content="//;s/"//')
-      [ -z "$og" ] && { echo "FAIL $u -> no og:image"; continue; }
-      case "$og" in *.svg) echo "FAIL $u -> og:image is SVG (not rendered by social platforms)";; esac
-      code=$(curl -sI --max-time 15 -o /dev/null -w '%{http_code}' "$og")
-      [ "$code" = "200" ] || echo "FAIL $u -> og:image $og => $code"
+      if [ -z "$og" ]; then
+        echo "FAIL $u -> no og:image"; bad=$((bad+1))
+      else
+        case "$og" in *.svg)
+          echo "FAIL $u -> og:image is SVG (not rendered by social platforms)"; bad=$((bad+1));;
+        esac
+        code=$(curl -sI --max-time 15 -o /dev/null -w '%{http_code}' "$og")
+        [ "$code" = "200" ] || { echo "FAIL $u -> og:image $og => $code"; bad=$((bad+1)); }
+      fi
+      printf '%s %s' "$n" "$bad" > "$tmp"
     done
+read -r n bad < "$tmp"; rm -f "$tmp"
+if [ "$n" -eq 0 ]; then echo "?    no URLs read from sitemap.xml — check did not run"
+elif [ "$bad" -eq 0 ]; then echo "OK   $n URLs, every og:image present and resolving"
+fi
 ```
+
+Every check in this file prints a line. A clean run that printed nothing would be
+indistinguishable from a check that never executed, which is the failure mode this file's
+own contract exists to prevent.
 
 ## C10 — Find behavioural claims that nothing verifies (meta-check)
 

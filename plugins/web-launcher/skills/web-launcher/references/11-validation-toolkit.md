@@ -236,5 +236,9 @@ After every deploy, run in this order:
    ```
 3. **11.2 External validators** — Rich Results + Schema + OG preview at minimum
 4. **11.3 Lighthouse** — desktop (`--preset=desktop`) and mobile (no preset), target 95+ / 90+
-5. **Indexing acceleration** — if content changed meaningfully, request GSC reindexing (see `12-indexing.md`)
+5. **Indexing acceleration** — if content changed meaningfully, request GSC reindexing (see
+   `12-indexing.md`). **Once per URL per cycle, not once per deploy.** `12-indexing.md` warns
+   against re-submitting the same URL in a short window; two deploys in a week to the same page is
+   one request, not two. Skip this step for a URL already submitted since its last meaningful
+   content change.
 6. **(If redirects changed)** Purge Everything in CF Caching before final test

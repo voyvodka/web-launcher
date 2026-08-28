@@ -100,7 +100,10 @@ Any one of these endpoints is enough: `api.indexnow.org/indexnow`, `www.bing.com
 ⚠️ Do not promise "indexed in minutes". The protocol guarantees only that the *notification* is
 delivered immediately; whether and when a participant crawls or indexes is not part of it.
 
-Automate via deploy hook (CF Worker on wrangler deploy event, or a CI job).
+Automate as a **step in the deploy pipeline**, not as a Cloudflare trigger: Workers has no
+"deployment finished" event a Worker can subscribe to. In practice that means a line after
+`wrangler deploy` in the CI job, or a `postdeploy` npm script — whatever already runs the deploy
+runs the ping.
 
 ## Backlink + entity strategy
 

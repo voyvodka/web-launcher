@@ -102,8 +102,14 @@ curl -sI http://DOMAIN/ | head -3  # expect 301 → https://DOMAIN/
 
 If brand query rank is a concern and the site is <6 weeks old:
 
+**Every numbered line is a claim about work that was done — say only the ones you actually did.**
+Requesting indexing in Search Console is a manual, authenticated UI action (Acceleration tactic #1);
+unless you performed it in this session, line 3 is a false report, and a user who believes it will
+not do it themselves. Drop any line you cannot point at, or rewrite it as the instruction it is
+("next step for you: request indexing in Search Console").
+
 > "Your site is freshly deployed. Google prioritizes older, authoritative sites first for any brand query — even yours. Here's what's in our control:
 > 1. Organization schema is in place (logo will show once re-crawled — 1-4 weeks)
 > 2. I've applied sameAs with all your profile links (helps entity consolidation)
-> 3. Requested indexing via GSC
+> 3. Indexing requested via GSC — *only if you did it; otherwise: "next step for you: request indexing in Search Console"*
 > What's out of our direct control: time + backlinks. Each Hacker News / Product Hunt mention / authoritative backlink accelerates ranking. Realistic expectation: 2-6 weeks for brand query #1 if no older competing site holds the slot."

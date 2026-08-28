@@ -13,7 +13,12 @@ Static/marketing sites still ship third-party code (framework, build tools, wran
 
 ## What to audit in any repo
 
-- `.github/dependabot.yml` or `renovate.json` — automated dep updates
+- `.github/dependabot.yml` or `renovate.json` — automated dep updates. **Exactly one of the two.**
+  If the scan finds both live, that is the finding: they open duplicate PRs for the same upgrade and
+  each closes the other's. Keep Renovate if the repo already uses grouping, scheduling or a shared
+  preset; keep Dependabot otherwise, since it needs no config file to be useful. Removing the loser
+  means deleting its config *and* disabling it in repo settings or uninstalling the app — a deleted
+  `renovate.json` alone leaves the app running on defaults.
 - `.github/workflows/*audit*.yml` — CI audit gate
 - GitHub repo Settings → Security → Advanced Security toggles (user confirms in UI)
 - A ruleset (or classic branch protection) on `main` — PR + status checks required

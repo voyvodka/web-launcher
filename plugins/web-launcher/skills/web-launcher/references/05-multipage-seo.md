@@ -11,7 +11,7 @@ Single-page baseline from `03-discoverability-classic.md` is insufficient once y
 
 - **Per-page canonical** — every route sets its own `<link rel="canonical" href="https://DOMAIN/route">`
 - **Per-page `<title>`** (≤60 chars) + **meta description** (≤160 chars) — unique per page, not a templated fallback
-- **Per-page `og:title` / `og:description` / `og:image`** — different social cards per page (otherwise every share looks identical)
+- **Per-page `og:title` / `og:description` / `og:image` / `og:url`** — different social cards per page (otherwise every share looks identical). `og:url` is the one that gets missed: `03-discoverability-classic.md`'s meta template hardcodes it to the site root, so a page that copies that block advertises the homepage as its canonical social target on every route.
 - **Breadcrumbs** — both UI and `BreadcrumbList` schema:
 
 ```html
