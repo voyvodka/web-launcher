@@ -1,6 +1,7 @@
 {
+  "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
   "name": "web-launcher",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Diagnose why a live site is not indexed, fix it, and verify the fix — plus discoverability scaffolding, Cloudflare Workers deployment, and repository hardening. Every technical claim carries its verification date and source.",
   "author": {
     "name": "voyvodka",
