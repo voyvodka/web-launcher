@@ -30,7 +30,7 @@ JPG/PNG/WEBP/GIF under 5 MB and not SVG, and they disagree on X's preferred rati
 |---|---|---|---|
 | `satori` | 0.33.4 | 2026-08-24 | Moving fast: 0.30.0 → 0.33.4 all landed between 2026-08-20 and 2026-08-24. `0.0.30-beta.1` still sits on the `beta` tag — it is **older** than `latest`, not newer |
 | `@resvg/resvg-js` | 2.6.2 | 2024-03-26 | Stable line is over two years old; `2.7.0-alpha.2` (2026-01-28) sits on `next`, repo's last commit 2026-03-26 |
-| `@vercel/og` | 1.0.1 | 2026-08-08 | Wraps the two above |
+| `@vercel/og` | 1.0.2 | 2026-08-24 | Wraps the two above; 1.0.2 moved its pin to `satori@0.33.3` |
 | `astro-og-canvas` | 0.13.0 | 2026-06-30 | Astro-specific wrapper |
 
 Runtime floors: `satori` still declares `engines.node >= 16` at 0.33.4 and its README states it

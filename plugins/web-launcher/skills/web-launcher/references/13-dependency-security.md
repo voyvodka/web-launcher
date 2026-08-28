@@ -486,14 +486,19 @@ ls pnpm-lock.yaml yarn.lock package-lock.json 2>/dev/null
 grep -rhoE "uses: [^ ]+@v[0-9][^ ]*" .github/workflows/ 2>/dev/null \
   | grep -vE "uses: (actions|github)/" | sort -u
 
-# 5. Pending CVEs?
-pnpm audit --audit-level=moderate 2>/dev/null || npm audit --audit-level=moderate 2>/dev/null
-
-# 6. Outdated summary
-pnpm outdated --long 2>/dev/null || npm outdated
-
-# 7. License sweep
-pnpm licenses list 2>/dev/null || npx license-checker-rseidelsohn --summary 2>/dev/null || true
+# 5-7. Run the ONE package manager the project uses. `a || b` is wrong here: these tools exit
+# non-zero when they FIND something, so the fallback fires on a real vulnerability and runs the
+# second tool against a lockfile it cannot read.
+if [ -f pnpm-lock.yaml ]; then
+  pnpm audit --audit-level=moderate; pnpm outdated --long; pnpm licenses list
+elif [ -f yarn.lock ]; then
+  yarn npm audit --severity moderate; yarn outdated
+elif [ -f bun.lock ] || [ -f bun.lockb ]; then
+  bun audit; bun outdated
+else
+  npm audit --audit-level=moderate; npm outdated
+fi
+npx license-checker-rseidelsohn --summary 2>/dev/null || true   # any manager, if the above has no licences command
 
 # 8. Agent-ready signals (see 06-agent-ready.md)
 curl -sI "https://DOMAIN/" | grep -iE "^link:" || echo "MISSING: Link headers"

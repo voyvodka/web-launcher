@@ -9,8 +9,40 @@ gets an entry, because "checked on this date" is the product.
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-08-28
+
 ### Fixed
 
+- **Two more checks passed on a dead origin.** 0.3.0 fixed C1, C5, C7's zero-URL case and C9; a
+  sweep of every check against the same six false-pass patterns found C4 (`hop_count`) reporting
+  `OK … 0 hop` for an unreachable host — masking exactly the dead-alias defect it exists to catch —
+  and C7 (`shell_leak_check`) reporting `OK no shell leak` when the origin never responded at all,
+  because every size is 0 and every code is `000`. Both now print `?  not checked`.
+- **`13-dependency-security.md` still ran `pnpm audit || npm audit`.** 0.3.0 fixed this in
+  `09-audit-workflow.md` and left the sibling instance in the Mode B checklist untouched. Audit
+  tools exit non-zero when they *find* something, so on a pnpm project with a real CVE the fallback
+  fired and ran `npm audit` against a lockfile it cannot read. Same single-scanner detection now.
+- The `@vercel/og` row in `07-og-satori.md` said `1.0.1` while the prose two lines above said `1.0.2`.
+  The table is the block an agent quotes; it now says `1.0.2`, published 2026-08-24.
+- A claim added in 0.3.0 — that Workers has no "deployment finished" event — carried no date and no
+  source, which is what this skill's own rule 3 forbids. It now states what was actually checked and
+  when, and marks the conclusion unverified: the docs document no such event, but an absence is not
+  a denial.
+
+### Fixed
+
+- **Two more checks passed on a dead origin.** `hop_count` read an unreachable host as zero
+  redirects — a clean single hop — and `shell_leak_check` read every size as 0 and every code as
+  `000` as "no leak". A dead alias and an origin that does not answer are exactly what those checks
+  exist to find, so both now detect the `000` sentinel first and report "not checked" instead of a
+  pass. Same shape as the C1/C5/C7 fixes in 0.3.0.
+- **The dependency sweep chained package managers with `||`.** `pnpm audit || npm audit` is
+  backwards: these tools exit non-zero when they *find* something, so a real vulnerability triggered
+  the fallback and ran the second tool against a lockfile it cannot read. The sweep now detects the
+  one manager the project uses from its lockfile and runs only that, with `bun` and `yarn` branches
+  added.
+- **`@vercel/og` was pinned at a stale version in the OG reference table.** Now 1.0.2 (2026-08-24),
+  which moved its own pin to `satori@0.33.3`. Verified against the registry on 2026-08-28.
 - **The `.gitignore` rule protecting `references/local/` was pinned to a literal path.** The sibling
   repository had the same shape of rule, and a directory rename stopped it matching — silently, with
   no error — putting maintainer-only files one `git add -A` away from a public commit. Nothing
@@ -18,6 +50,14 @@ gets an entry, because "checked on this date" is the product.
   `**/references/local/`, and CI asserts that nothing under `references/local/` or `docs/` is
   tracked. This plugin tells every repo it audits that a written rule is not a check; the rule that
   keeps its own maintainer notes private is now checked.
+
+### Changed
+
+- **The "no Cloudflare deploy-finished event" claim is marked partly verified.** The Workers
+  configuration docs were read on 2026-08-28 and document no such event, but an absence is not a
+  documented denial and a full enumeration of trigger types was not confirmed. The advice is
+  unchanged — a step after `wrangler deploy` works either way — but the claim behind it no longer
+  reads as established fact.
 
 ## [0.3.0] - 2026-08-28
 
