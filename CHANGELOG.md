@@ -9,6 +9,8 @@ gets an entry, because "checked on this date" is the product.
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-08-28
+
 ### Fixed
 
 - **C1 passed a direct 404.** Yesterday's fix added the `000` no-response branch but left the gap
@@ -128,5 +130,6 @@ gets an entry, because "checked on this date" is the product.
   action SHAs in the workflow from going stale. This plugin recommends the practice; it now
   follows it.
 
-[Unreleased]: https://github.com/voyvodka/web-launcher/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/voyvodka/web-launcher/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/voyvodka/web-launcher/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/voyvodka/web-launcher/releases/tag/v0.2.0
