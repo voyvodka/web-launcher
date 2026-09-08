@@ -9,6 +9,27 @@ gets an entry, because "checked on this date" is the product.
 
 ## [Unreleased]
 
+## [0.3.2] - 2026-09-08
+
+### Fixed
+
+- **Two release blocks in this changelog held the same fixes twice.** `0.3.1` carried two
+  `### Fixed` headings describing the same four repairs in different words, and `0.3.0` split
+  twenty genuine entries across two `### Fixed` lists with a `### Changed` between them. The cause
+  was the same in both: separate pull requests each appended to `[Unreleased]`, and the release
+  stamped both without merging them. Merged, with every unique entry kept — including the
+  `**/references/local/` ignore-rule entry that appeared in only one of `0.3.1`'s two blocks and
+  would have been lost by deduplicating on the heading alone. The Workers "deployment finished"
+  claim, which was recorded once under `Fixed` and again under `Changed`, is now stated once.
+
+### Added
+
+- CI checks the changelog's structure: no section heading twice inside one version block, only
+  Keep a Changelog section names, an `[Unreleased]` section that the next change can land in, and
+  one dated heading per version. This file spent two weeks stating the same fixes twice and no
+  check looked; a written convention is not a check, which is the argument this plugin makes about
+  every site it audits.
+
 ## [0.3.1] - 2026-08-28
 
 ### Fixed
@@ -17,32 +38,13 @@ gets an entry, because "checked on this date" is the product.
   sweep of every check against the same six false-pass patterns found C4 (`hop_count`) reporting
   `OK … 0 hop` for an unreachable host — masking exactly the dead-alias defect it exists to catch —
   and C7 (`shell_leak_check`) reporting `OK no shell leak` when the origin never responded at all,
-  because every size is 0 and every code is `000`. Both now print `?  not checked`.
+  because every size is 0 and every code is `000`. Both now detect the `000` sentinel first and
+  print `?  not checked`.
 - **`13-dependency-security.md` still ran `pnpm audit || npm audit`.** 0.3.0 fixed this in
   `09-audit-workflow.md` and left the sibling instance in the Mode B checklist untouched. Audit
   tools exit non-zero when they *find* something, so on a pnpm project with a real CVE the fallback
-  fired and ran `npm audit` against a lockfile it cannot read. Same single-scanner detection now.
-- The `@vercel/og` row in `07-og-satori.md` said `1.0.1` while the prose two lines above said `1.0.2`.
-  The table is the block an agent quotes; it now says `1.0.2`, published 2026-08-24.
-- A claim added in 0.3.0 — that Workers has no "deployment finished" event — carried no date and no
-  source, which is what this skill's own rule 3 forbids. It now states what was actually checked and
-  when, and marks the conclusion unverified: the docs document no such event, but an absence is not
-  a denial.
-
-### Fixed
-
-- **Two more checks passed on a dead origin.** `hop_count` read an unreachable host as zero
-  redirects — a clean single hop — and `shell_leak_check` read every size as 0 and every code as
-  `000` as "no leak". A dead alias and an origin that does not answer are exactly what those checks
-  exist to find, so both now detect the `000` sentinel first and report "not checked" instead of a
-  pass. Same shape as the C1/C5/C7 fixes in 0.3.0.
-- **The dependency sweep chained package managers with `||`.** `pnpm audit || npm audit` is
-  backwards: these tools exit non-zero when they *find* something, so a real vulnerability triggered
-  the fallback and ran the second tool against a lockfile it cannot read. The sweep now detects the
-  one manager the project uses from its lockfile and runs only that, with `bun` and `yarn` branches
-  added.
-- **`@vercel/og` was pinned at a stale version in the OG reference table.** Now 1.0.2 (2026-08-24),
-  which moved its own pin to `satori@0.33.3`. Verified against the registry on 2026-08-28.
+  fired and ran `npm audit` against a lockfile it cannot read. The sweep now detects the one manager
+  the project uses from its lockfile and runs only that, with `bun` and `yarn` branches added.
 - **The `.gitignore` rule protecting `references/local/` was pinned to a literal path.** The sibling
   repository had the same shape of rule, and a directory rename stopped it matching — silently, with
   no error — putting maintainer-only files one `git add -A` away from a public commit. Nothing
@@ -50,14 +52,15 @@ gets an entry, because "checked on this date" is the product.
   `**/references/local/`, and CI asserts that nothing under `references/local/` or `docs/` is
   tracked. This plugin tells every repo it audits that a written rule is not a check; the rule that
   keeps its own maintainer notes private is now checked.
-
-### Changed
-
-- **The "no Cloudflare deploy-finished event" claim is marked partly verified.** The Workers
-  configuration docs were read on 2026-08-28 and document no such event, but an absence is not a
-  documented denial and a full enumeration of trigger types was not confirmed. The advice is
-  unchanged — a step after `wrangler deploy` works either way — but the claim behind it no longer
-  reads as established fact.
+- The `@vercel/og` row in `07-og-satori.md` said `1.0.1` while the prose two lines above said `1.0.2`.
+  The table is the block an agent quotes; it now says `1.0.2`, published 2026-08-24, which moved its
+  own pin to `satori@0.33.3`. Verified against the registry on 2026-08-28.
+- **A claim added in 0.3.0 carried no date and no source**, which is what this skill's own rule 3
+  forbids: that Workers has no "deployment finished" event. The Workers configuration docs were read
+  on 2026-08-28 and document no such event, but an absence is not a documented denial and a full
+  enumeration of trigger types was not confirmed. The advice is unchanged — a step after
+  `wrangler deploy` works either way — but the claim behind it is now marked partly verified rather
+  than reading as established fact.
 
 ## [0.3.0] - 2026-08-28
 
@@ -86,20 +89,6 @@ gets an entry, because "checked on this date" is the product.
 - `09-audit-workflow.md` ended a step with "Commit logically", which is a git mutation the rest of
   the skill does not authorise. Commit, push, deploy, cache purge, sitemap submit and DNS changes now
   each need their own approval, named — approval to apply a change is not approval to publish it.
-
-### Changed
-
-- `16-search-console.md` now defaults to the `webmasters.readonly` scope. The read-write scope buys
-  exactly one operation, `sitemaps.submit`, and a token that can submit can submit by accident.
-  Widening it requires the user to have asked, and the sitemap URL confirmed immediately before the
-  call. The file also states up front that it is a procedure, not shipped client code — there is no
-  OAuth handler or API client in this plugin and there is not meant to be.
-- `14-diagnostic-checks.md` notes that C5, C7 and C9 request URLs taken from fetched content
-  (sitemap `<loc>`, `og:image`), so against a site you do not control those values decide what your
-  machine connects to.
-
-### Fixed
-
 - **`15-geo-measurement.md` misclassified `ClaudeBot` as a retrieval crawler.** Anthropic documents
   it as the training crawler; `Claude-User` and `Claude-SearchBot` are the retrieval side. The error
   sat inside the file's own worked example of *verifying a tool's claim against the vendor's
@@ -142,6 +131,17 @@ gets an entry, because "checked on this date" is the product.
 - `13-dependency-security.md` gave no rule for a repo already running both Dependabot and Renovate,
   though `SKILL.md`'s pitfalls list names it. Now says how to choose and that deleting the config
   alone does not stop Renovate.
+
+### Changed
+
+- `16-search-console.md` now defaults to the `webmasters.readonly` scope. The read-write scope buys
+  exactly one operation, `sitemaps.submit`, and a token that can submit can submit by accident.
+  Widening it requires the user to have asked, and the sitemap URL confirmed immediately before the
+  call. The file also states up front that it is a procedure, not shipped client code — there is no
+  OAuth handler or API client in this plugin and there is not meant to be.
+- `14-diagnostic-checks.md` notes that C5, C7 and C9 request URLs taken from fetched content
+  (sitemap `<loc>`, `og:image`), so against a site you do not control those values decide what your
+  machine connects to.
 
 ## [0.2.0] - 2026-08-28
 
