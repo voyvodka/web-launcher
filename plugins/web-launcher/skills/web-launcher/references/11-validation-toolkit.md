@@ -8,13 +8,19 @@
 ## 11.1 Curl probe — every deploy
 
 ```bash
-IP=188.114.97.3  # CF anycast; --resolve bypasses local DNS cache
+# --resolve pins every probe to the address DNS gives now, bypassing a stale local cache. Taken
+# from DNS rather than hardcoded, so it works whether or not the origin is on Cloudflare.
+IP=$(dig +short DOMAIN | grep -E '^[0-9.]+$' | head -1)
+[ -n "$IP" ] || echo "?    DOMAIN did not resolve — none of the probes below can run"
 for p in / /favicon.svg /robots.txt /sitemap.xml /llms.txt /humans.txt /og-cover.png /.well-known/security.txt /.well-known/http-message-signatures-directory /random-unknown-path; do
   printf "%-48s " "DOMAIN$p"
   curl -sI --resolve DOMAIN:443:$IP --max-time 10 "https://DOMAIN$p" | head -1
 done
 
-# www → apex redirect (must be 301)
+# www → apex redirect (must be 301) — on a real page AND a random path. A random path alone
+# passes even when a Worker redirect runs behind asset serving and never sees real pages
+# (08-cloudflare-deploy.md, routing order).
+curl -sI --resolve www.DOMAIN:443:$IP "https://www.DOMAIN/" | head -3
 curl -sI --resolve www.DOMAIN:443:$IP "https://www.DOMAIN/test-$(date +%s)" | head -3
 
 # Agent-ready signals
@@ -33,11 +39,12 @@ done
 ```
 
 Expected:
-- All real paths **200**; `www.*` **301**
+- All real paths **200**; `www.*` **301** on both the real page and the random path
 - `/random-unknown-path` — **200** on an SPA (index fallback), **404** on a static or SSR site. Decide
   which shape the site is *before* reading this line, otherwise it proves nothing either way.
-- `Link:` header present with `rel="alternate"`, `rel="sitemap"`, `rel="security-txt"`
-- `Content-Signal:` present in robots.txt
+- `Link:` header present with the relations the site declares in `_headers` (C8 checks each one)
+- `Content-Signal:` present in robots.txt **only if the site chose to state it** — absence is not a
+  finding (`06-agent-ready.md` priority matrix)
 - Content-Type markdown when `Accept: text/markdown`
 - **`hops=0`** on every internal-link probe. Any non-zero is trailing-slash drift or a legacy-alias chain — see `09-audit-workflow.md` §1d for the source-grep + fix.
 
@@ -77,7 +84,7 @@ answered, not that the tool's output was independently judged correct.
 
 | Tool | What the probe returned | Do this instead |
 |---|---|---|
-| ~~Mobile-Friendly Test~~ (`search.google.com/test/mobile-friendly`) | **Retired.** The URL now redirects to the Lighthouse documentation *(checked 2026-08-14)* | Lighthouse's mobile run (§11.3) plus the SEO category's font-size and tap-target audits cover what it used to report |
+| ~~Mobile-Friendly Test~~ (`search.google.com/test/mobile-friendly`) | **Retired.** The URL now redirects to the Lighthouse documentation *(checked 2026-08-14)* | Lighthouse's mobile run (§11.3). ⚠️ Its SEO category no longer carries font-size or tap-target audits (absent from the 13.5.0 `default-config.js`, checked 2026-09-25) — check legibility and tap spacing by hand on a phone-width viewport |
 | ~~Twitter/X Card Validator~~ (`cards-dev.twitter.com/validator`) | **Login-gated and unmaintained.** Redirects to an X login page; the preview feature was withdrawn and X has shipped no replacement *(checked 2026-08-14)* | Validate `twitter:*` tags with the OG preview tools above, then confirm the real render by pasting the URL into the X composer — the card renders without posting |
 
 ⚠️ **`securityheaders.com` is deliberately absent.** It returned 403 to every probe attempted on
@@ -86,22 +93,22 @@ covers the same ground and did verify.
 
 ## 11.3 Lighthouse deep dive
 
-Current release: **Lighthouse 13.4.1**, published 2026-07-20 (`npm view lighthouse dist-tags`,
-*checked 2026-08-14*). Pin this in CI rather than tracking `@latest` — scores are not comparable
+Current release: **Lighthouse 13.5.0**, published 2026-09-18 (`npm view lighthouse dist-tags`,
+*checked 2026-09-25*). Pin this in CI rather than tracking `@latest` — scores are not comparable
 across versions.
 
 Run headless in both form factors:
 
 ```bash
 # Desktop
-npx lighthouse@13.4.1 https://DOMAIN \
+npx lighthouse@13.5.0 https://DOMAIN \
   --preset=desktop \
   --output=html --output=json --output-path=lh-desktop \
   --chrome-flags="--headless=new"
 
 # Mobile — the DEFAULT form factor, so pass no preset at all.
 # Google primarily ranks on mobile, which is why this run is the one that matters.
-npx lighthouse@13.4.1 https://DOMAIN \
+npx lighthouse@13.5.0 https://DOMAIN \
   --output=html --output=json --output-path=lh-mobile \
   --chrome-flags="--headless=new"
 
@@ -109,7 +116,7 @@ open lh-mobile.report.html
 ```
 
 > **There is no `--preset=mobile`.** `--preset` accepts exactly `perf`, `experimental`, `desktop`
-> — verified in `cli/cli-flags.js` of the published 13.4.1 tarball, *2026-08-14*. Passing
+> — verified in `cli/cli-flags.js` of the published 13.5.0 tarball, *2026-09-25*. Passing
 > `--preset=mobile` fails argument validation; mobile emulation is what you get by default.
 
 **Target scores: 95+ desktop, 90+ mobile** for static sites.
@@ -122,33 +129,39 @@ from the published npm tarballs: the category is **absent in 13.2.0 and earlier,
 13.3.0 onward** (13.3.0 published 2026-05-07). It needs no flag and no custom config.
 
 It scores how ready a page is for an AI agent to *operate* it. Its audits, read from
-`default-config.js` in 13.4.1 (*checked 2026-08-14*):
+`default-config.js` in 13.5.0 (*checked 2026-09-25*):
 
 | Audit | Group |
 |---|---|
-| `llms-txt` | Agent Accessibility — the `llms.txt` file from `03-discoverability-classic.md` |
+| `llms-txt` | Agent Discoverability — the `llms.txt` file from `03-discoverability-classic.md` |
+| `ard-schema` | Agent Discoverability — validates `/.well-known/ai-catalog.json` (or a `rel="ai-catalog"` link) against the ARD spec. New in 13.5.0 |
 | `agent-accessibility-tree` | Agent Accessibility |
 | `webmcp-registered-tools` | WebMCP |
 | `webmcp-form-coverage` | WebMCP |
 | `webmcp-schema-validity` | WebMCP |
 | `cumulative-layout-shift` | (reused from Performance) |
 
-Two caveats, both from Lighthouse's own category description:
+The category moved between 13.4.1 and 13.5.0 — `llms-txt` changed group and `ard-schema` was
+added — so re-read the config when bumping the pin rather than trusting this table.
 
-- It is scored as a **fraction**, not a 0–100 score — do not set a numeric threshold against it.
+Two caveats from Lighthouse itself, and one scope note:
+
+- It is scored as a **fraction** (`categoryScoreDisplayMode: 'fraction'`), not a 0–100 score — do
+  not set a numeric threshold against it.
 - Lighthouse labels it *"still under development and subject to change."* Treat a regression here
   as a signal to investigate, never as a release blocker.
-- Four of its six audits target **WebMCP**, which this skill does not scaffold. A site not shipping
-  WebMCP scores low here by design; that is a scope decision, not a defect to fix.
+- Three of its seven audits target **WebMCP** and one targets an `ai-catalog.json`, none of which
+  this skill scaffolds. A site not shipping them scores low here by design; that is a scope
+  decision, not a defect to fix.
 
 It does **not** affect Search ranking. Treat it as the lab-side companion to `isitagentready.com`
 (§11.2) and to the agent-ready signals in `06-agent-ready.md`.
 
 > **lhci lag is real and still unresolved.** `@lhci/cli@0.15.1` (latest) declares
 > `"lighthouse": "12.6.1"` as a pinned dependency — read from the package manifest on the npm
-> registry, *checked 2026-08-14*. Lighthouse 12.6.1 has no agentic-browsing category, so a
+> registry, *checked 2026-09-25*. Lighthouse 12.6.1 has no agentic-browsing category, so a
 > `categories:agentic-browsing` assertion in `lighthouserc.json` errors rather than failing
-> cleanly. Get the category from the **standalone** `npx lighthouse@13.4.1` until lhci bundles
+> cleanly. Get the category from the **standalone** `npx lighthouse@13.5.0` until lhci bundles
 > ≥ 13.3.0. Pin both tools by exact version in CI (`@lhci/cli@0.15.1`, not `@latest`).
 
 Common failures and fixes per category:
@@ -158,7 +171,7 @@ Common failures and fixes per category:
 | **Performance** | ≥95 | Render-blocking CSS → inline critical, defer rest / Large LCP image → preload + `fetchpriority="high"` + AVIF or WebP / Long main thread → remove unused JS, code-split / Slow TTFB → CF edge cache, HTTP/3 / Unused CSS → purge (tailwind), tree-shake / Font swap flash → preload + `font-display: swap` |
 | **Accessibility** | 100 | Missing `<html lang>` → add `<html lang="en">` / Low contrast → bump token colors / Missing alt → `alt=""` decorative, descriptive otherwise / Buttons lack name → aria-label / No skip link → `<a class="skip-link" href="#main">` / Headings skip levels → fix h1→h2→h3 order |
 | **Best Practices** | ≥95 | Mixed content HTTP → HTTPS rewrites / Console errors → fix / Deprecated APIs → migrate / No CSP → add (we ship one in `08-cloudflare-deploy.md`) / Missing HSTS → we ship one / Images wrong aspect ratio → set width/height attributes |
-| **SEO** | 100 | Missing meta description → add per page / No canonical → add / robots.txt blocks → fix / Link lacks discernible name → aria-label / Non-descriptive link text "click here" → rewrite / Font too small on mobile → ≥12px base |
+| **SEO** | 100 | Missing meta description → add per page / No canonical → add / robots.txt blocks → fix / Link lacks discernible name → aria-label / Non-descriptive link text "click here" → rewrite / Invalid `hreflang` → fix or remove |
 
 ## 11.4 Core Web Vitals (Google ranks on these)
 
@@ -241,4 +254,7 @@ After every deploy, run in this order:
    against re-submitting the same URL in a short window; two deploys in a week to the same page is
    one request, not two. Skip this step for a URL already submitted since its last meaningful
    content change.
-6. **(If redirects changed)** Purge Everything in CF Caching before final test
+6. **(If redirects changed)** Re-test with a cache-busting query string rather than purging.
+   Static assets revalidate by default, so a purge only matters for paths where the site set a
+   long `max-age` itself, and it is a separately approved operation (`08-cloudflare-deploy.md`
+   gotchas, `09-audit-workflow.md` Step 4).

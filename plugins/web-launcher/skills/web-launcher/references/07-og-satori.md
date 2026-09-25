@@ -19,27 +19,27 @@ JPG/PNG/WEBP/GIF under 5 MB and not SVG, and they disagree on X's preferred rati
 
 - Declarative JSX-style tree → SVG → PNG pipeline
 - Native font embedding (no system font dependency at render time)
-- Vercel's own OG generator is a wrapper around it: `@vercel/og@1.0.2` declares
-  `satori@0.33.3` + `@resvg/resvg-wasm@2.4.1` as its only runtime dependencies
-  (verified 2026-08-28 — npm registry metadata for `@vercel/og`)
+- Vercel's own OG generator is a wrapper around it: `@vercel/og@1.0.3` declares
+  `satori@0.33.5` + `@resvg/resvg-wasm@2.4.1` as its only runtime dependencies
+  (verified 2026-09-25 — npm registry metadata for `@vercel/og`)
 - Pairs with `@resvg/resvg-js` for SVG→PNG conversion
 
-**Versions as of 2026-08-28** (npm registry):
+**Versions as of 2026-09-25** (npm registry):
 
 | Package | Latest stable | Published | Note |
 |---|---|---|---|
-| `satori` | 0.33.4 | 2026-08-24 | Moving fast: 0.30.0 → 0.33.4 all landed between 2026-08-20 and 2026-08-24. `0.0.30-beta.1` still sits on the `beta` tag — it is **older** than `latest`, not newer |
+| `satori` | 0.33.5 | 2026-09-22 | Moving fast: 0.30.0 (2026-08-20) → 0.33.5 in five weeks. `0.0.30-beta.1` still sits on the `beta` tag — it is **older** than `latest`, not newer |
 | `@resvg/resvg-js` | 2.6.2 | 2024-03-26 | Stable line is over two years old; `2.7.0-alpha.2` (2026-01-28) sits on `next`, repo's last commit 2026-03-26 |
-| `@vercel/og` | 1.0.2 | 2026-08-24 | Wraps the two above; 1.0.2 moved its pin to `satori@0.33.3` |
-| `astro-og-canvas` | 0.13.0 | 2026-06-30 | Astro-specific wrapper |
+| `@vercel/og` | 1.0.3 | 2026-09-22 | Wraps the two above; 1.0.3 moved its pin to `satori@0.33.5` |
+| `astro-og-canvas` | 0.13.2 | 2026-09-15 | Astro-specific wrapper |
 
-Runtime floors: `satori` still declares `engines.node >= 16` at 0.33.4 and its README states it
+Runtime floors: `satori` still declares `engines.node >= 16` at 0.33.5 and its README states it
 runs in the browser, Node ≥ 16 and Web Workers; `@resvg/resvg-js` declares `engines.node >= 10` and
-its README claims Node 12–22 (`engines` re-checked 2026-08-28 — npm metadata; the README claims
+its README claims Node 12–22 (`engines` re-checked 2026-09-25 — npm metadata; the README claims
 still carry their 2026-08-14 stamp).
 
-> ⚠️ **The four minor releases between 0.29.0 and 0.33.4 have not been read.** Version numbers here
-> are current as of 2026-08-28, but the CSS-support and layout claims further down this file were
+> ⚠️ **The releases between 0.29.0 and 0.33.5 have not been read.** Version numbers here
+> are current as of 2026-09-25, but the CSS-support and layout claims further down this file were
 > written against 0.29.0 and are **not re-verified**. Check them against the satori README before
 > quoting them.
 

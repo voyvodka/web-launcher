@@ -16,8 +16,9 @@ input, not a demonstrated lever. Say that to the user rather than promising visi
 ### 1. `llms.txt` — agent-facing, not a ranking lever
 
 See `03-discoverability-classic.md`, which carries the honest framing and the sources: Google
-confirmed it has no effect on Search or AI Overviews (verified 2026-08-14), and measured crawler
-traffic to `/llms.txt` is negligible. Ship it because it is cheap infrastructure for agents and
+says it is not needed for Search and does not affect visibility or rankings there (verified
+2026-09-25), and crawler traffic to `/llms.txt` is reported to be negligible (⚠️ third-party
+write-ups only). Ship it because it is cheap infrastructure for agents and
 because Lighthouse's Agentic Browsing audit checks for it — never as a rankings argument.
 
 Content rules, when you do ship one:

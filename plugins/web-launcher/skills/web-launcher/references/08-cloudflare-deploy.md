@@ -111,7 +111,7 @@ order above):
   "assets": {
     "directory": "./deploy",
     "binding": "ASSETS",
-    "not_found_handling": "single-page-application",
+    "not_found_handling": "404-page",   // same choice as the baseline — pick per site shape
     "run_worker_first": true
   },
   "routes": [
@@ -155,7 +155,7 @@ per line (verified 2026-08-14 — [Headers](https://developers.cloudflare.com/wo
   Referrer-Policy: strict-origin-when-cross-origin
   Permissions-Policy: browsing-topics=()
   X-Frame-Options: DENY
-  Content-Security-Policy: default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; script-src 'self' 'unsafe-inline'; img-src 'self' data:; base-uri 'self'; frame-ancestors 'none'; form-action 'self'
+  Content-Security-Policy: default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; script-src 'self'; img-src 'self' data:; base-uri 'self'; frame-ancestors 'none'; form-action 'self'
   Link: </llms.txt>; rel="alternate"; type="text/markdown", </sitemap.xml>; rel="sitemap", </.well-known/security.txt>; rel="security-txt"
 
 /og-cover.png
@@ -170,8 +170,9 @@ Notes:
   directive**; the Topics API opt-out is `browsing-topics=()`
   (verified 2026-08-14 — [MDN Permissions-Policy](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Permissions-Policy)).
   Sites still shipping `interest-cohort=()` are sending a header nothing reads.
-- **`'unsafe-inline'` in `script-src` is not needed for JSON-LD, and the baseline above should not
-  carry it on that basis.** A `<script type="application/ld+json">` block is a *data block*: the
+- **`'unsafe-inline'` in `script-src` is not needed for JSON-LD, and the baseline above does not
+  carry it.** `style-src` keeps it for the inline `<style>` block the scaffold ships. A
+  `<script type="application/ld+json">` block is a *data block*: the
   HTML spec's "prepare the script element" algorithm returns at the type-matching step
   ("Otherwise, return. No script is executed") long before it reaches the CSP inline check further
   down the same algorithm (verified 2026-08-28 —
@@ -207,8 +208,8 @@ Past 2,100 rules, the docs point to Bulk Redirects.
 
 ## Deploy sequence
 
-Latest wrangler at time of writing: **4.123.0**, published 2026-08-13
-(verified 2026-08-14 — `curl -s https://registry.npmjs.org/wrangler | jq -r '."dist-tags".latest'`).
+Latest wrangler at time of writing: **4.140.0**, published 2026-09-25
+(verified 2026-09-25 — `curl -s https://registry.npmjs.org/wrangler | jq -r '."dist-tags".latest'`).
 
 ```bash
 # 1. Login once (interactive, browser OAuth)
@@ -229,8 +230,9 @@ under [Workers commands](https://developers.cloudflare.com/workers/wrangler/comm
 (verified 2026-08-14).
 
 Expected output names the uploaded file count and the registered triggers. ⚠️ Do not pattern-match
-the exact wording — Wrangler ships weekly (12 releases between 2026-07-21 and 2026-08-13) and the
-output format is not a documented contract. Assert on `curl` results instead.
+the exact wording — Wrangler ships several times a week (21 releases between 2026-08-26 and
+2026-09-25, npm registry) and the output format is not a documented contract. Assert on `curl`
+results instead.
 
 Custom domains create the DNS records and issue certificates automatically; the docs note this
 generates an **Advanced Certificate** on the zone, and that deleting the custom domain does *not*
@@ -282,8 +284,8 @@ feature ([Block AI bots](https://developers.cloudflare.com/bots/additional-confi
   only guarantee that the top-most matching rule wins and that "redirects are always followed". Use
   `not_found_handling: "single-page-application"` for SPA fallback rather than a catch-all redirect.
   (verified 2026-08-14 — [Redirects](https://developers.cloudflare.com/workers/static-assets/redirects/))
-- **OAuth token carries `zone:read` only.** `npx wrangler@4.123.0 login --scopes-list` (run
-  2026-08-14) lists exactly one zone scope, read-level. So the CLI cannot create redirect rules,
+- **OAuth token carries `zone:read` only.** `npx wrangler@4.140.0 login --scopes-list` (run
+  2026-09-25) lists exactly one zone scope, read-level. So the CLI cannot create redirect rules,
   change SSL mode, or purge cache — every zone-level operation is user-via-dashboard. Confirm with
   that command rather than trusting this line.
 - **Finder drag-upload hides dotfiles** — `.well-known/` disappears silently. ⚠️ macOS behaviour,
@@ -302,8 +304,10 @@ feature ([Block AI bots](https://developers.cloudflare.com/bots/additional-confi
 ## Verification after deploy
 
 ```bash
-# Resolve through Cloudflare's current anycast IPs rather than a hardcoded address
-IP=$(dig +short DOMAIN | head -1)
+# Resolve through Cloudflare's current anycast IPs rather than a hardcoded address. `dig +short`
+# can print a CNAME before the address; keep the first IPv4 line only.
+IP=$(dig +short DOMAIN | grep -E '^[0-9.]+$' | head -1)
+[ -n "$IP" ] || echo "?    DOMAIN did not resolve — the probes below cannot run"
 
 for p in / /favicon.svg /robots.txt /sitemap.xml /.well-known/security.txt /og-cover.png; do
   printf '%s -> ' "$p"
@@ -320,5 +324,7 @@ curl -sI --resolve www.DOMAIN:443:$IP "https://www.DOMAIN/test-$(date +%s)" | he
 # the Worker is running behind asset serving — see the routing-order section.
 ```
 
-All 200 except www (301) and random paths (200 via SPA fallback). See `11-validation-toolkit.md` for
-the full probe suite.
+All 200, and www 301 on both the real page and the random path. A random path on the apex is
+`404` when `not_found_handling` is `"404-page"` (multi-page site) and `200` only on a real
+client-routed SPA — decide which from the field notes above before reading the result. See
+`11-validation-toolkit.md` for the full probe suite.

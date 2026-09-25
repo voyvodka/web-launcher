@@ -83,9 +83,22 @@ jobs:
               if not re.match(r'^\[\d+\.\d+\.\d+\] - \d{4}-\d{2}-\d{2}$', v):
                   errors.append(f"line {n}: '{v}' is not '[x.y.z] - YYYY-MM-DD'")
 
-          nums = [re.match(r'^\[([^\]]+)\]', v).group(1) for _, v in released]
+          nums = [m.group(1) for _, v in released if (m := re.match(r'^\[(\d+\.\d+\.\d+)\]', v))]
           for d in sorted({n for n in nums if nums.count(n) > 1}):
               errors.append(f"version {d} has more than one heading — one version, one block")
+
+          # The footer is what turns each heading into a link; 0.3.1 and 0.3.2 shipped without one
+          # and [Unreleased] kept comparing from 0.3.0, so the "what changed" link was wrong.
+          refs = dict(m.groups() for l in lines if (m := re.match(r'^\[([^\]]+)\]:\s*(\S+)', l)))
+          for d in dict.fromkeys(nums):
+              if d not in refs:
+                  errors.append(f"version {d} has no '[{d}]: <url>' link reference")
+          if nums:
+              newest = max(nums, key=lambda v: tuple(map(int, v.split('.'))))
+              want = f"/compare/v{newest}...HEAD"
+              if not refs.get('Unreleased', '').endswith(want):
+                  errors.append(f"[Unreleased] must compare from the newest release: "
+                                f"...{want} (found {refs.get('Unreleased', 'nothing')})")
 
           for e in errors:
               print(f"::error file=CHANGELOG.md::{e}")

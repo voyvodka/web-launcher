@@ -5,17 +5,18 @@
 > **Verified 2026-08-14 · review by 2026-10-13.** Claims that can rot carry their own date and
 > source inline. A claim without one has not been checked — treat it as unverified, not as fact.
 >
-> Propagation windows below are **estimates, not sourced figures** — Google publishes no timings.
-> Treat them as rough expectation-setting and say so to the user.
+> Google publishes no timings for any of the signals below, so this file quotes none. Tell the
+> user "days to weeks, depending on how often the site is crawled" and point at Search Console
+> for the actual signal — the same rule as `09-audit-workflow.md` Step 6 and `12-indexing.md`.
 
 ## Reality check (set expectations honestly before promising anything)
 
-| Signal | How to provide | Propagation window |
+| Signal | How to provide | What gates the timing |
 |---|---|---|
-| Organization logo in Knowledge Panel / SERP | `Organization` schema with absolute `logo` URL (≥112×112 px, PNG ≥512 ideal) | 1–4 weeks after re-crawl |
-| Brand query rank #1 | Indexed + canonical + `sameAs` profile linking + ≥3 external backlinks | 2–8 weeks for new domains; older competing sites may block longer |
-| Sitelinks (sub-page list below main result) | Clear site structure + sitemap + strong internal linking + age | 6+ months typically |
-| Rich snippets (Product, Review, Article, Event) | Corresponding schema.org type on the page + valid content | 1–3 weeks after first crawl |
+| Organization logo in Knowledge Panel / SERP | `Organization` schema with absolute `logo` URL (≥112×112 px, PNG ≥512 ideal) | Google re-crawling the page that carries the markup |
+| Brand query rank #1 | Indexed + canonical + `sameAs` profile linking + external backlinks | Domain age and competing sites on the same name — not configuration |
+| Sitelinks (sub-page list below main result) | Clear site structure + sitemap + strong internal linking + age | Google's own choice; no markup requests them |
+| Rich snippets (Product, Review, Article, Event) | Corresponding schema.org type on the page + valid content | Re-crawl, then Google's eligibility decision |
 
 **Key lesson**: brand query ranking is a TIME problem, not a configuration problem. A 1-day-old domain can't out-rank a 10-year-old authoritative site on brand queries — even with perfect SEO. Set honest user expectations.
 
@@ -54,7 +55,8 @@
    - Hacker News (Show HN), Product Hunt launch, relevant subreddit launch post
    - Personal site using `rel="me"` bidirectional link to brand site (verifies entity identity)
 
-5. **Wikidata entry** (if notable) — one of Google's strongest entity signals. Takes weeks for curation.
+5. **Wikidata entry** (if notable) — feeds structured facts that Google's Knowledge Graph draws on.
+   Takes weeks for curation. Do not call it the *strongest* entity signal — see `12-indexing.md`.
 
 6. **Bing Webmaster Tools** — Bing is more permissive with new domains; often faster first ranking than Google. See `12-indexing.md`.
 
@@ -109,7 +111,7 @@ not do it themselves. Drop any line you cannot point at, or rewrite it as the in
 ("next step for you: request indexing in Search Console").
 
 > "Your site is freshly deployed. Google prioritizes older, authoritative sites first for any brand query — even yours. Here's what's in our control:
-> 1. Organization schema is in place (logo will show once re-crawled — 1-4 weeks)
+> 1. Organization schema is in place (the logo can show once Google re-crawls the page — typically days to weeks; Google publishes no timing)
 > 2. I've applied sameAs with all your profile links (helps entity consolidation)
 > 3. Indexing requested via GSC — *only if you did it; otherwise: "next step for you: request indexing in Search Console"*
-> What's out of our direct control: time + backlinks. Each Hacker News / Product Hunt mention / authoritative backlink accelerates ranking. Realistic expectation: 2-6 weeks for brand query #1 if no older competing site holds the slot."
+> What's out of our direct control: time + backlinks. Each Hacker News / Product Hunt mention / authoritative backlink accelerates ranking. Google publishes no timing for this; Search Console will show when it happens."

@@ -5,9 +5,9 @@
 > **Verified 2026-08-14 · review by 2026-10-13.** Claims that can rot carry their own date and
 > source inline. A claim without one has not been checked — treat it as unverified, not as fact.
 >
-> **Partially re-verified 2026-08-28**: every version number and every pinned SHA in this file was
-> re-resolved on that date. Nothing else was re-checked — the prose, pricing and policy claims still
-> carry their 2026-08-14 stamps.
+> **Partially re-verified 2026-09-25**: every version number and every pinned SHA in this file was
+> re-resolved on that date, and the pnpm-12 re-check in §13.3 was carried out. Nothing else was
+> re-checked — the prose, pricing and policy claims still carry their 2026-08-14 stamps.
 
 Static/marketing sites still ship third-party code (framework, build tools, wrangler, satori, resvg, font packages). Dependencies rot: CVEs appear, breaking changes land, transitive deps get yanked. Automate this — manual review doesn't scale.
 
@@ -42,7 +42,7 @@ updates:
       interval: "weekly"
       day: "monday"
       time: "05:00"
-      timezone: "Europe/Istanbul"
+      timezone: "UTC"
     open-pull-requests-limit: 5
     groups:
       minor-patch:
@@ -90,7 +90,7 @@ Install Renovate GitHub App, then `renovate.json`:
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": ["config:recommended", ":preserveSemverRanges"],
   "schedule": ["before 5am on monday"],
-  "timezone": "Europe/Istanbul",
+  "timezone": "UTC",
   "dependencyDashboard": true,
   "packageRules": [
     {
@@ -168,8 +168,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: pnpm/action-setup@v6
-        with: { version: 10 }
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413  # v6.1.0
+        with: { version: 12 }
       - uses: actions/setup-node@v7
         with: { node-version: 24, cache: "pnpm" }
       - run: pnpm install --frozen-lockfile
@@ -181,23 +181,25 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with: { fetch-depth: 0 }
-      - uses: gitleaks/gitleaks-action@v3
+      - uses: gitleaks/gitleaks-action@e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e  # v3.0.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # Organization-owned repos only; personal accounts leave this unset
           GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
 ```
 
-Every version in that workflow was checked on 2026-08-14 via `gh api repos/<owner>/<repo>/releases/latest`.
-What changed since the previous major-version generation of this example:
+Every version in that workflow was checked on 2026-09-25 via
+`gh api repos/<owner>/<repo>/releases/latest`. The two third-party actions are SHA-pinned per
+§13.7; the first-party `actions/*` stay on tags. What changed since the previous major-version
+generation of this example:
 
 | Action | Was | Now | Latest release |
 |---|---|---|---|
 | `actions/checkout` | v4 | **v7** | `v7.0.1`, 2026-07-20 |
 | `actions/setup-node` | v4 | **v7** | `v7.0.0`, 2026-07-14 |
-| `pnpm/action-setup` | v4 | **v6** | `v6.0.10`, 2026-08-03 |
+| `pnpm/action-setup` | v4 | **v6** | `v6.1.0`, 2026-09-05 — adds pnpm 12 support. ⚠️ The floating `v6` tag still points at `v6.0.10`, so pin the `v6.1.0` SHA, not `@v6`, for pnpm 12 |
 | `gitleaks/gitleaks-action` | v2 | **v3** | `v3.0.0`, 2026-05-30 |
-| `github/codeql-action` | v3 | **v4** | tag `v4.37.9` (2026-08-26) |
+| `github/codeql-action` | v3 | **v4** | tag `v4.38.2` (2026-09-24) |
 
 Three things that bite when copying an older version of this file:
 
@@ -208,17 +210,20 @@ Three things that bite when copying an older version of this file:
   something pins you lower.
 - **`pnpm/action-setup` needs `version:`** unless `package.json` declares `packageManager` (or
   `devEngines.packageManager`). The old example omitted it and silently depended on that field
-  existing. It also now carries a successor notice: for **pnpm v11+** the replacement is
-  [`pnpm/setup`](https://github.com/pnpm/setup) (`v2.0.2`, 2026-08-09), which installs the
-  standalone pnpm binary and a runtime in one step, replacing `actions/setup-node`:
+  existing. **pnpm 12 is now `latest`** (`12.6.0`, 2026-09-22; `latest-11` is `11.27.1`,
+  `latest-10` is `10.34.5`), so the example pins `version: 12`. Re-checked on 2026-09-25, the
+  action's README now reads *"This action supports pnpm v12 and earlier"* and says it can stay
+  paired with `actions/setup-node` for v11 and v12 — it is no longer the v10-and-older path. The
+  alternative, [`pnpm/setup`](https://github.com/pnpm/setup), is at **`v3.0.0`** (2026-09-20, a
+  breaking major over the `v2` this file used to show). It installs the standalone pnpm binary
+  plus a runtime in one step, replacing `actions/setup-node`, and supports **pnpm v11 and newer
+  only**; its README adds that pnpm v11 publishes no Intel macOS binary, so use v12 there:
   ```yaml
-  - uses: pnpm/setup@v2
-    with: { version: 11, runtime: node@24, cache: true }
+  - uses: pnpm/setup@fbda4c85fc2e1e08721cd8763afea8f48d60f024  # v3.0.0
+    with: { version: 12, runtime: node@24, cache: true }
   ```
-  `pnpm/action-setup` remains correct for pnpm v10 and older. (pnpm latest on npm: `11.24.0`,
-  2026-08-26. `12.0.0` is already published on the `next-12` dist-tag as of 2026-08-26 — when it is
-  promoted to `latest`, re-check the `version: 11` in the snippet above and the v11-vs-v10 split
-  in this bullet.)
+  `v3` also runs `pnpm install` by default when a `package.json` is present — set
+  `install: false` for a job that only audits. Pick one of the two actions per job.
 - **gitleaks-action v3 wants `GITLEAKS_LICENSE` for organization repos**, not personal accounts —
   that is a v2-era condition that still holds, and a missing license is the usual reason the job
   fails on an org repo. v3 is otherwise a drop-in: same inputs and outputs, only the Actions runtime
@@ -315,7 +320,7 @@ syft dir:. -o spdx-json > sbom.spdx.json
 > **`npx @anchore/syft` does not work — there is no such npm package** (registry returns 404,
 > verified 2026-08-14). `@cyclonedx/cyclonedx-npm` is real and current: `6.0.1`, published
 > 2026-08-11 (same check). If only one SBOM format is needed, CycloneDX is the one with no
-> extra install step. Syft latest is `v1.51.1`, 2026-08-27.
+> extra install step. Syft latest is `v1.52.0`, 2026-09-17 (re-checked 2026-09-25).
 
 Third option, zero install, if the repo is on GitHub with the dependency graph enabled — GitHub
 generates an SPDX SBOM itself:
@@ -328,8 +333,9 @@ dependency graph knows, not what a build actually produced, so it is the weaker 
 three for attestation purposes.
 
 Format status, verified 2026-08-14 via each specification's own releases:
-- **CycloneDX** specification `1.7.1`, 2026-06-02 — still actively versioned. Check which spec
-  version your generator emits; a tool can be current while defaulting to an older spec.
+- **CycloneDX** specification `1.7.2`, 2026-09-17 (re-checked 2026-09-25) — still actively
+  versioned. Check which spec version your generator emits; a tool can be current while
+  defaulting to an older spec.
 - **SPDX** specification `3.0.1`, 2024-12-17. ⚠️ Most tooling still emits SPDX **2.3** by default
   (Syft's `spdx-json` output and the GitHub endpoint above both did on the check date). If a
   customer contract names SPDX 3.x specifically, verify the emitted `spdxVersion` field rather
@@ -361,7 +367,7 @@ Attach to GitHub Release artifacts.
   > The SHA previously given here (`b4ffde65…`) still resolves — but to a commit from **2023-10-17**,
   > i.e. the `actions/checkout` v4 line, four majors behind. That is the failure mode of pinning
   > without a bot: it keeps working and quietly stops being maintained. The SHAs above and below
-  > were re-resolved 2026-08-28; re-resolve rather than copying them, and let Dependabot's
+  > were re-resolved 2026-09-25; re-resolve rather than copying them, and let Dependabot's
   > `github-actions` ecosystem move the pins (it rewrites SHAs and updates the trailing comment).
   >
   > **Dereference annotated tags or the pin is wrong.** `gh api repos/<owner>/<repo>/git/ref/tags/<tag>`
@@ -373,12 +379,13 @@ Attach to GitHub Release artifacts.
   > gh api repos/<owner>/<repo>/commits/<tag> --jq .sha    # follows tag -> commit for both kinds
   > ```
   >
-  > | Action | Major tag | Commit SHA on 2026-08-28 |
+  > | Action | Tag | Commit SHA on 2026-09-25 |
   > |---|---|---|
   > | `actions/checkout` | v7 | `3d3c42e5aac5ba805825da76410c181273ba90b1` |
   > | `actions/setup-node` | v7 | `820762786026740c76f36085b0efc47a31fe5020` |
-  > | `github/codeql-action` | v4 | `cdf488f595d80d6e07e03d4674febd5ab45fa938` |
-  > | `pnpm/action-setup` | v6 | `0977fd99725f1db4007ccb2928dbb4e90d06cc86` |
+  > | `github/codeql-action` | v4.38.2 | `2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2` |
+  > | `pnpm/action-setup` | v6.1.0 | `ea17c68df8912ef543352723c149a84f56e3d413` |
+  > | `pnpm/setup` | v3 | `fbda4c85fc2e1e08721cd8763afea8f48d60f024` |
   > | `gitleaks/gitleaks-action` | v3 | `e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e` |
 
 - **socket.dev** — GitHub App reviews dep-change PRs for supply-chain red flags (install scripts,
@@ -445,16 +452,16 @@ to a user as a commitment.
 | `pnpm/yarn/npm audit` | ✅ | Node CVEs | CLI + CI | current |
 | socket.dev | ⚠️ metered: 1,000 scans/mo, 3 members, unlimited repos; OSS can request a free Team account | Supply chain / malicious detection | GitHub App | current |
 | Snyk | ⚠️ per-product monthly test counts, not one pool: **200** Open Source (SCA), **100** Code (SAST), **100** Container, **300** IaC | CVE + license + IaC | GitHub App + CLI | current |
-| CodeQL | ✅ public repos; private needs paid Code Security | Static analysis | GitHub Actions | `codeql-action` `v4.37.9` |
+| CodeQL | ✅ public repos; private needs paid Code Security | Static analysis | GitHub Actions | `codeql-action` `v4.38.2`, 2026-09-24 |
 | Gitleaks | ✅ CLI; ⚠️ the **Action** needs `GITLEAKS_LICENSE` on org-owned repos | Secret scan | Pre-commit + CI | CLI `v8.30.1`, 2026-03-21 |
-| TruffleHog | ✅ open source | Secret scan (deeper entropy) | Pre-commit + CI | `v3.97.1`, 2026-08-24 |
+| TruffleHog | ✅ open source | Secret scan (deeper entropy) | Pre-commit + CI | `v3.97.9`, 2026-09-24 |
 | license-checker-rseidelsohn | ✅ | License audit | CLI + CI | `5.0.1`, 2026-05-27 |
-| CycloneDX / Syft | ✅ | SBOM | CLI + release | `6.0.1` / `v1.51.1`, Aug 2026 |
+| CycloneDX / Syft | ✅ | SBOM | CLI + release | `6.0.1` (2026-08-11) / `v1.52.0` (2026-09-17) |
 
 The old table said Snyk gave "200 tests/mo" flat — that number is only the Open Source product's
 allowance ([snyk.io/plans](https://snyk.io/plans/), read 2026-08-14). Release dates in the last
 column come from `gh api repos/<owner>/<repo>/releases/latest` and the npm registry, re-run
-2026-08-28; all four scanners are actively released, none are abandoned.
+2026-09-25; all four scanners are actively released, none are abandoned.
 
 ## 13.10 Day-1 baseline for any public repo
 
@@ -492,7 +499,7 @@ grep -rhoE "uses: [^ ]+@v[0-9][^ ]*" .github/workflows/ 2>/dev/null \
 if [ -f pnpm-lock.yaml ]; then
   pnpm audit --audit-level=moderate; pnpm outdated --long; pnpm licenses list
 elif [ -f yarn.lock ]; then
-  yarn npm audit --severity moderate; yarn outdated
+  yarn npm audit --severity moderate; npm outdated   # Berry has no `yarn outdated` — see §13.3
 elif [ -f bun.lock ] || [ -f bun.lockb ]; then
   bun audit; bun outdated
 else
@@ -517,5 +524,6 @@ curl -sI "https://DOMAIN/.well-known/http-message-signatures-directory" | grep -
 
 Roll output into severity gap report:
 - 🔴 **Critical**: active CVE, secret detected, no branch protection
-- 🟡 **Recommended**: no Dependabot/Renovate, no CI audit gate, unpinned third-party actions, license violation, no `Content-Signal`, no `Link:` headers
-- 🟢 **Nice**: no SBOM, no socket.dev, no pre-commit secret scan, no Markdown-for-Agents, no Web Bot Auth JWKS
+- 🟡 **Recommended**: no Dependabot/Renovate, no CI audit gate, unpinned third-party actions, license violation, no `Link:` headers
+- 🟢 **Nice**: no SBOM, no socket.dev, no pre-commit secret scan, no Markdown-for-Agents
+- ⚪ **Intent only**: no `Content-Signal`, no Web Bot Auth JWKS — no known technical effect (`06-agent-ready.md`)
