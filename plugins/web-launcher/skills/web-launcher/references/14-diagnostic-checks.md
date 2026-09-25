@@ -56,33 +56,42 @@ produces exactly this pair.
 ```bash
 check_redirect_targets() {
   local base="$1"; shift
-  local fail=0 p first final
+  local fail=0 redirects=0 p first final
   for p in "$@"; do
     first=$(curl -sI --max-time 15 -o /dev/null -w '%{http_code}' "$base$p")
     final=$(curl -sIL --max-time 20 -o /dev/null -w '%{http_code}' "$base$p")
-    # Only an explicit 200 at the end of the chain is a pass. Everything else is named.
-    # Two ways this check used to lie: curl prints 000 when it never got a response at all
-    # (DNS, TLS, timeout), and a path that 404s directly — never a redirect — matched no
-    # branch at all. Both fell through to the OK line.
+    # This check judges redirects, not paths. A probe path that answers 404 directly was never
+    # redirected and is the correct answer for a path that does not exist; failing it made C1
+    # fire on every healthy site. curl prints 000 when it never got a response at all (DNS,
+    # TLS, timeout) — that is "not checked", never a pass.
     if [ "$first" = "000" ] || [ "$final" = "000" ]; then
       echo "?    $p  no response (dns/tls/timeout) — not checked"
       fail=1
-    elif [ "$first" -ge 300 ] && [ "$first" -lt 400 ] && [ "$final" -ge 400 ]; then
-      echo "FAIL $p  $first -> final $final (redirect leads to an error)"
-      fail=1
-    elif [ "$final" != "200" ]; then
-      echo "FAIL $p  $first -> final $final (not 200)"
+    elif [ "$first" -ge 300 ] && [ "$first" -lt 400 ]; then
+      redirects=$((redirects + 1))
+      if [ "$final" != "200" ]; then
+        echo "FAIL $p  $first -> final $final (redirect leads to a non-200)"
+        fail=1
+      fi
+    elif [ "$first" -ge 500 ]; then
+      echo "FAIL $p  $first (server error on a probe path)"
       fail=1
     fi
   done
-  [ "$fail" -eq 0 ] && echo "OK   redirect targets resolve to 200"
+  [ "$fail" -eq 0 ] && echo "OK   $redirects redirect(s) in $# probes, each ends at 200"
   return $fail
 }
 
-# Probe the shapes a router is most likely to mishandle: extensions, dots, casing.
+# Probe the shapes a router is most likely to mishandle: extensions, dots, casing. Add every
+# legacy alias and every source in `_redirects` or the framework's redirects map — those are the
+# paths that redirect, and a redirect is what this check judges.
 check_redirect_targets "$BASE" \
   /index.html /foo.html /foo.php /a.b.c /nonexistent-xyz
 ```
+
+A direct `404` on a probe path passes: it was never redirected. Only a redirect whose chain ends
+anywhere but `200` fails. The OK line says how many probes actually redirected — `0 redirect(s)`
+means the check had nothing to judge, so add real redirect sources before calling it clean.
 
 **Root cause to look for in code:** a normalization redirect issued *before* the lookup that
 decides whether the destination exists. The fix is ordering — resolve first, redirect only to
@@ -99,15 +108,19 @@ declares.
 live=$(mktemp); curl -s --max-time 20 "$BASE/robots.txt" > "$live"
 if [ ! -s "$live" ]; then
   echo "?    live robots.txt is empty or unreachable — not checked"
-elif diff "$live" ./public/robots.txt; then
-  echo "OK   robots.txt matches repo"
 else
-  echo "FAIL live robots.txt differs from repo — edge injection or stale deploy"
+  if diff "$live" ./public/robots.txt; then
+    echo "OK   robots.txt matches repo"
+  else
+    echo "FAIL live robots.txt differs from repo — edge injection or stale deploy"
+  fi
+  if grep -qi 'managed content' "$live"; then
+    echo "FAIL a CDN is injecting a managed robots.txt block"
+  else
+    echo "OK   no CDN-managed block in live robots.txt"
+  fi
 fi
 rm -f "$live"
-
-curl -s --max-time 20 "$BASE/robots.txt" | grep -qi 'managed content' \
-  && echo "FAIL a CDN is injecting a managed robots.txt block"
 ```
 
 Adjust the repo path per framework (`public/`, `static/`, `assets/`). Run the same diff for
@@ -119,19 +132,29 @@ policy and align the repo to it — but never leave two conflicting declarations
 ## C3 — Host and scheme consolidation must be permanent
 
 **Explains:** split authority, and "Page with redirect" that never consolidates. `301`/`308` pass
-signals to the target; `302`/`307` explicitly do not.
+signals to the target; `302`/`307` explicitly do not. Exactly one of the four host/scheme variants
+may answer `200` — the canonical origin in `BASE`. The other three must redirect permanently and
+land on it. Two variants both answering `200` is the defect itself, not two passes.
 
 ```bash
-host="${BASE#https://}"; apex="${host#www.}"
+host="${BASE#https://}"; apex="${host#www.}"; canon="$BASE/"; n200=0
 for u in "http://$apex/" "https://$apex/" "http://www.$apex/" "https://www.$apex/"; do
   code=$(curl -sI --max-time 15 -o /dev/null -w '%{http_code}' "$u")
+  final=$(curl -sIL --max-time 20 -o /dev/null -w '%{url_effective}' "$u")
   case "$code" in
-    200)     echo "OK   $u -> 200 (canonical host)" ;;
-    301|308) echo "OK   $u -> $code (permanent)" ;;
+    200)     n200=$((n200 + 1))
+             if [ "$u" = "$canon" ]; then echo "OK   $u -> 200 (canonical)"
+             else echo "FAIL $u -> 200 (serves content; must 301/308 to $canon)"; fi ;;
+    301|308) if [ "$final" = "$canon" ]; then echo "OK   $u -> $code -> $canon"
+             else echo "FAIL $u -> $code, but the chain ends at $final, not $canon"; fi ;;
     302|307) echo "FAIL $u -> $code (temporary; must be 301/308 for a permanent move)" ;;
-    *)       echo "?    $u -> $code" ;;
+    000)     echo "?    $u  no response (dns/tls/timeout) — not checked" ;;
+    *)       echo "FAIL $u -> $code" ;;
   esac
 done
+if   [ "$n200" -gt 1 ]; then echo "FAIL $n200 variants answer 200 — host/scheme not consolidated"
+elif [ "$n200" -eq 0 ]; then echo "FAIL no variant answers 200 — $canon itself is not serving"
+fi
 ```
 
 ## C4 — No more than one hop, counting meta-refresh
@@ -179,15 +202,23 @@ sitemap_all_200() {
   sm="$1"
   # A pipe into `while` runs the loop in a subshell, so counters go to a file.
   # Written this way rather than `done < <(...)`, which is bash-only.
+  body=$(mktemp); curl -s --max-time 30 "$sm" > "$body"
+  # An index lists child sitemaps, which answer 200 themselves — checking them as pages prints
+  # a clean OK for a site whose real URLs were never read.
+  if grep -qi '<sitemapindex' "$body"; then
+    echo "?    $sm is a sitemap index — not checked; run this against each child:"
+    grep -o '<loc>[^<]*</loc>' "$body" | sed -e 's|<loc>|       |' -e 's|</loc>||'
+    rm -f "$body"; return 1
+  fi
   tmp=$(mktemp); printf '0 0' > "$tmp"
-  curl -s --max-time 30 "$sm" | grep -o '<loc>[^<]*</loc>' | sed -e 's|<loc>||g' -e 's|</loc>||g' \
+  grep -o '<loc>[^<]*</loc>' "$body" | sed -e 's|<loc>||g' -e 's|</loc>||g' \
   | while read -r u; do
       read -r n bad < "$tmp"; n=$((n+1))
       code=$(curl -sI --max-time 15 -o /dev/null -w '%{http_code}' "$u")
       [ "$code" = "200" ] || { echo "FAIL $u -> $code (listed in sitemap, not 200)"; bad=$((bad+1)); }
       printf '%s %s' "$n" "$bad" > "$tmp"
     done
-  read -r n bad < "$tmp"; rm -f "$tmp"
+  read -r n bad < "$tmp"; rm -f "$tmp" "$body"
   # Zero URLs is not a pass. The sitemap may have 404'd, timed out, or parsed to nothing —
   # printing OK here is how a missing sitemap gets reported as a healthy one.
   if   [ "$n" -eq 0 ];   then echo "?    0 URLs read from $sm — sitemap missing, empty or unparseable"
@@ -200,7 +231,8 @@ curl -s "$BASE/robots.txt" | grep -i '^sitemap:'
 sitemap_all_200 "$BASE/sitemap.xml"
 ```
 
-Where a sitemap index is used, run this against each child sitemap.
+Where a sitemap index is used, the function says so and lists the children; run it against each.
+C6 and C9 below also read `$BASE/sitemap.xml` — on an index, point them at a child sitemap.
 
 ## C6 — Canonical must equal the URL that served it
 
@@ -212,7 +244,7 @@ canonical_matches() {
   local u c
   for u in "$@"; do
     c=$(curl -s --max-time 15 "$u" \
-      | grep -oiE '<link rel="canonical"[^>]*>' | head -1 \
+      | grep -oiE '<link[^>]*rel="canonical"[^>]*>' | head -1 \
       | grep -oE 'href="[^"]*"' | sed 's/href="//;s/"//')
     if   [ -z "$c" ];    then echo "FAIL $u -> no canonical"
     elif [ "$u" != "$c" ]; then echo "FAIL $u -> canonical=$c (differs)"
@@ -294,12 +326,14 @@ tmp=$(mktemp); printf '0 0' > "$tmp"
 curl -s "$BASE/sitemap.xml" | grep -o '<loc>[^<]*</loc>' \
   | sed -e 's|<loc>||g' -e 's|</loc>||g' | while read -r u; do
       read -r n bad < "$tmp"; n=$((n+1))
-      og=$(curl -s --max-time 15 "$u" | grep -oiE '<meta property="og:image" content="[^"]*"' \
-           | sed 's/.*content="//;s/"//')
+      # Attribute order is free in HTML; matching `property` before `content` missed half the
+      # sites that set the tag correctly.
+      og=$(curl -s --max-time 15 "$u" | grep -oiE '<meta[^>]*property="og:image"[^>]*>' | head -1 \
+           | grep -oE 'content="[^"]*"' | sed 's/content="//;s/"$//')
       if [ -z "$og" ]; then
         echo "FAIL $u -> no og:image"; bad=$((bad+1))
       else
-        case "$og" in *.svg)
+        case "$og" in *.svg|*.svg[?#]*)
           echo "FAIL $u -> og:image is SVG (not rendered by social platforms)"; bad=$((bad+1));;
         esac
         code=$(curl -sI --max-time 15 -o /dev/null -w '%{http_code}' "$og")

@@ -96,7 +96,20 @@ Multi-page: see `05-multipage-seo.md` — use framework integrations (`@astrojs/
 
 Emerging convention (llmstxt.org). Factual, scannable. This is also the GEO primary surface (see `04-geo.md`).
 
-**Reality check (2026) — don't oversell it.** Google confirmed (15 Jun 2026 AI-optimization guide update) that `llms.txt` has **no effect, positive or negative, on Search rankings or AI Overviews** — Search ignores it. Bot-traffic studies show requests touching `/llms.txt` are statistically negligible vs total LLM crawler volume. So it is **not** an SEO or GEO *ranking* factor — never was. Where it still earns its place: (a) the **agentic web / B2A layer** — agents acting on a user's behalf can consume a clean entry brief, and (b) **Chrome Lighthouse's "Agentic Browsing" audit** (default since 13.3.0, 7 May 2026) checks for its existence. Ship it as cheap agent-facing infrastructure; never pitch it to a user as a rankings lever.
+**Reality check (2026) — don't oversell it.** Google added a note to its AI optimization guide on
+2026-06-15 saying these files *"aren't needed for Google Search (and won't negatively or positively
+impact your visibility or rankings)"*, and the guide tells site owners they can ignore *"creating
+unnecessary AI text files (like llms.txt)"* (verified 2026-09-25 —
+[Search Central documentation updates](https://developers.google.com/search/updates),
+[AI optimization guide](https://developers.google.com/search/docs/fundamentals/ai-optimization-guide)).
+⚠️ The claim that requests for `/llms.txt` are a negligible share of LLM crawler traffic comes from
+third-party bot-traffic write-ups and has no primary source here. Either way it is **not** an SEO
+or GEO *ranking* factor. Where it still earns its place: (a) the **agentic web / B2A layer** —
+agents acting on a user's behalf can consume a clean entry brief, and (b) **Lighthouse's "Agentic
+Browsing" category** runs an `llms-txt` audit by default from 13.3.0, published 2026-05-07
+(verified 2026-09-25 — npm registry and the published `default-config.js`; details in
+`11-validation-toolkit.md` §11.3). Ship it as cheap agent-facing infrastructure; never pitch it to
+a user as a rankings lever.
 
 ```markdown
 # PROJECT_NAME
@@ -156,12 +169,12 @@ Status: production
 Source: static (Cloudflare Workers)
 
 /* STACK */
-App: Tauri 2 + Rust + React
-Site: Astro 5
+App: PRIMARY_STACK
+Site: SITE_FRAMEWORK
 
 /* THANKS */
-Adalight protocol: Adafruit
-Typography: IBM Plex Sans, IBM Plex Mono, Instrument Serif
+CREDIT_NAME: CREDIT_REASON
+Typography: FONT_FAMILIES
 ```
 
 ## JSON-LD structured data
@@ -222,13 +235,14 @@ Validate after deploy with:
 <meta name="description" content="…≤160 char…" />
 <meta name="theme-color" content="#HEX" />
 
-<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+<link rel="icon" href="/favicon.ico" sizes="32x32" />
+<link rel="icon" href="/favicon.svg" type="image/svg+xml" sizes="any" />
 <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
 <!-- These two are PNG on purpose and must not be switched to favicon.svg:
      apple-touch-icon is not rendered from SVG by iOS, and Google's Organization.logo
      must be a raster image to appear in the Knowledge Panel. `01-brand-application.md`
-     and `10-brand-serp.md` carry the sourced versions of both claims. -->
-<link rel="mask-icon" href="/favicon.svg" color="#ACCENT" />
+     and `10-brand-serp.md` carry the sourced versions of both claims.
+     No mask-icon: 01 drops it, and it never took a full-colour SVG anyway. -->
 
 <meta name="application-name" content="PROJECT" />
 <meta name="apple-mobile-web-app-title" content="PROJECT" />

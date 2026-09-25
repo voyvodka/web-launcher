@@ -43,6 +43,15 @@ macOS and Linux by default. GEO scoring uses the [GeoDaddy](https://geodaddy.dev
 declared by the plugin and fetched via `npx` on first use; Search Console access needs a one-time
 Google OAuth setup, and both are optional.
 
+**If GeoDaddy fails to connect.** Claude Code gives an MCP server 30 seconds to start. The first
+`npx` run of `geodaddy-mcp` downloads the package and, in its postinstall step, the analyzer binary
+from GitHub releases — on a slow network that can run past 30 seconds, and the failure is then
+cached for a while. Start Claude Code once with a longer limit, e.g. `MCP_TIMEOUT=90000 claude`,
+so the cache fills; later starts take about a second. The postinstall step ignores its own
+failure (`|| true`): if the binary download fails, the server still starts and only `analyze_url`
+fails, with "geodaddy binary not found". Clearing the `npx` cache entry for `geodaddy-mcp` and
+starting again re-runs the download.
+
 ## Usage
 
 Invoke it in a site's repository:

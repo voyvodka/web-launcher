@@ -9,6 +9,92 @@ gets an entry, because "checked on this date" is the product.
 
 ## [Unreleased]
 
+## [0.3.3] - 2026-09-25
+
+### Added
+
+- CI's changelog check now requires a `[x.y.z]:` link for every released version and an
+  `[Unreleased]` link that compares from the newest tag. Two releases shipped without their links
+  and `[Unreleased]` kept comparing from `v0.3.0`; nothing looked, so nothing noticed.
+- README: what to do when GeoDaddy fails to connect. The first `npx` start downloads the analyzer
+  binary and can run past Claude Code's 30-second MCP limit (`MCP_TIMEOUT` raises it), and the
+  package's postinstall ignores a failed download, so the server starts and only `analyze_url`
+  breaks.
+
+### Changed
+
+- Versions re-resolved on 2026-09-25 against npm and GitHub: satori `0.33.5`, `@vercel/og`
+  `1.0.3`, `astro-og-canvas` `0.13.2`, `@astrojs/sitemap` `3.7.4`, wrangler `4.140.0`, Lighthouse
+  `13.5.0`, `codeql-action` `v4.38.2` (SHA re-resolved), TruffleHog `v3.97.9`, Syft `v1.52.0`,
+  CycloneDX spec `1.7.2`.
+- **pnpm 12 became `latest`, which is the event `13-dependency-security.md` said to re-check on.**
+  `pnpm/action-setup` now supports pnpm 12 and earlier, but only from `v6.1.0` — its floating `v6`
+  tag still points at `v6.0.10` — so the example pins the `v6.1.0` SHA with `version: 12`.
+  `pnpm/setup` moved to a breaking `v3` that installs pnpm 11+ only and runs `pnpm install` by
+  default. The old "`action-setup` is for v10 and older" framing is gone.
+- Lighthouse 13.5.0 reshaped the Agentic Browsing category: `llms-txt` changed group and an
+  `ard-schema` audit (`ai-catalog.json`) was added. `11` lists all seven audits.
+- `draft-ietf-aipref-vocab-08` added an `ai-use` category. `06` said AIPREF had no counterpart to
+  `Content-Signal`'s `ai-input`; it now has a provisional one.
+
+### Removed
+
+- Every indexing and logo timeline. `10` and `12` quoted unsourced ranges that disagreed with each
+  other, while `09` said never to quote a number. `09`'s rule now holds everywhere: "days to
+  weeks, depending on crawl frequency", and Search Console for the real signal.
+
+### Fixed
+
+- **C1 failed every healthy site.** Its probe paths are meant not to exist, and since 0.3.0 only a
+  final `200` passed, so a correct `404` printed `FAIL`. C1 judges redirects: a direct `404` now
+  passes, a redirect ending anywhere but `200` fails, a `5xx` fails, and the OK line counts how
+  many probes actually redirected.
+- **C3 passed a site with no consolidation at all.** Every variant answering `200` printed four OK
+  lines — the split-authority and missing-HTTPS-redirect defects C3 exists to catch. Exactly one
+  variant may now answer `200`; the others must 301/308 into it.
+- **`09`'s action-pin grep matched nothing.** It was the regex `13` had already replaced for
+  exactly that reason; the sibling was left behind. It now runs `13.11` check 4.
+- **The baseline CSP still carried `script-src 'unsafe-inline'`**, although 0.3.0's changelog and
+  `08`'s own note said it had been removed.
+- **`SKILL.md`'s always-loaded pitfalls contradicted `08`**: an unconditional SPA fallback, two
+  field observations `08` had removed as unsourced (purge before retesting, "Bindings=0"), and a
+  Worker redirect where `08` recommends a zone rule. Rewritten to match `08`.
+- `08`'s Worker-redirect variant hardcoded the SPA fallback and its checks expected random paths to
+  answer `200` — the soft 404 0.3.0 removed from the baseline. `11.1` tested www→apex only on a
+  random path, the one probe that passes when a Worker never sees real pages.
+- `09` and `11` pinned every probe to a hardcoded Cloudflare IP, which breaks a platform-agnostic
+  audit of any site not on Cloudflare. The address now comes from DNS.
+- **`15`'s citation check could not see a `Disallow`.** Grepping token names prints `User-agent:`
+  lines and nothing for a `User-agent: *` block. It now resolves each token to its governing
+  group. The file also said four of GeoDaddy's six bot checks were training crawlers; it is five.
+- `16` mapped "Blocked by robots.txt" to `indexingState: BLOCKED_BY_ROBOTS_TXT`, which Google marks
+  "Reserved, no longer in use" (as is `verdict PARTIAL`). It now uses `robotsTxtState` and
+  `pageFetchState`.
+- `13.11` ran `yarn outdated`, which `13.3` says Yarn Berry does not have, and the `13.3` workflow
+  tag-pinned the third-party actions `13.7` says to SHA-pin.
+- `06` called `sitemap` and `security-txt` IANA-registered link relations (they are not), told the
+  reader to ship the empty JWKS placeholder while its own matrix says to skip it, and pointed at
+  `11` for a live-vs-repo diff that lives in `14` C2.
+- `09` proposed `Content-Signal` and the empty JWKS placeholder as fixes, called a missing
+  `Content-Signal` a GEO weakness, and counted a scanner score rise as re-validation; `13.11` rated
+  `Content-Signal` 🟡. `06`'s matrix and `SKILL.md`'s ⚪ band say they have no known effect. They
+  are intent-only everywhere now.
+- `mask-icon` was dropped in `01` and `02` but re-added by `03`'s meta template, `09`'s patch plan
+  and `SKILL.md`'s scan. It is gone everywhere now; `03` and `02` gained the `favicon.ico` `01`
+  requires.
+- `02` stated as verified two iOS claims `01` says have no primary source.
+- `05`'s orphan check compared `/docs/x` against `/x`, so every page read as an orphan.
+- `11` cited Lighthouse font-size and tap-target audits that no longer exist, and miscounted the
+  WebMCP audits.
+- `03`'s humans.txt template carried a real project's stack; `13`'s examples a real timezone.
+- `01`'s emoji search used `grep -P`, which macOS grep rejects.
+- `14`: C2's managed-block test printed nothing on success, C5 reported a sitemap index as clean,
+  and C6/C9 missed tags whose attributes came in the other order.
+- `03`'s `llms.txt` claim now cites Google's documentation update, and marks the crawler-traffic
+  claim as secondary.
+- `SKILL.md` said Mode A ran the Mode-B-only live probe and counted 13 validators where `11` lists
+  15. Its description now leads with the trigger keywords.
+
 ## [0.3.2] - 2026-09-08
 
 ### Fixed
@@ -66,7 +152,7 @@ gets an entry, because "checked on this date" is the product.
 
 ### Fixed
 
-- **C1 passed a direct 404.** Yesterday's fix added the `000` no-response branch but left the gap
+- **C1 passed a direct 404.** The `000` no-response branch (the C1 entry below) left the gap
   underneath it: a path that 404s without ever redirecting matched no branch, so `fail` stayed 0 and
   the check printed `OK redirect targets resolve to 200`. Only an explicit `200` at the end of the
   chain is a pass now. **C5 printed success on a sitemap that never downloaded** — zero URLs read is
@@ -180,6 +266,9 @@ gets an entry, because "checked on this date" is the product.
   action SHAs in the workflow from going stale. This plugin recommends the practice; it now
   follows it.
 
-[Unreleased]: https://github.com/voyvodka/web-launcher/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/voyvodka/web-launcher/compare/v0.3.3...HEAD
+[0.3.3]: https://github.com/voyvodka/web-launcher/compare/v0.3.2...v0.3.3
+[0.3.2]: https://github.com/voyvodka/web-launcher/compare/v0.3.1...v0.3.2
+[0.3.1]: https://github.com/voyvodka/web-launcher/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/voyvodka/web-launcher/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/voyvodka/web-launcher/releases/tag/v0.2.0

@@ -8,8 +8,9 @@
 > This file changed substantially in that audit: two of its four headline signals turned out to
 > have **no measurable effect today**. Read the priority matrix before recommending anything here.
 >
-> **AIPREF rows re-verified 2026-08-28** and one of them reversed — see §`Content-Usage`. The rest
-> of this file still carries its 2026-08-14 stamp.
+> **AIPREF rows re-verified 2026-08-28** and one of them reversed — see §`Content-Usage`. The
+> vocabulary draft and the `Link:` relation registry were re-read on **2026-09-25**. The rest of
+> this file still carries its 2026-08-14 stamp.
 
 Parallel to classic SEO and GEO, a new discovery layer is forming: **AI agents that programmatically consume your site** (ChatGPT tool use, Perplexity retrieval, Claude MCP servers, custom enterprise bots). Cloudflare's 2025 `isitagentready.com` scanner encodes four signals agents look for — different surface from classic crawlers.
 
@@ -24,7 +25,14 @@ state intent or wants a scanner green, and say which of the two you are doing.
 
 ### 1. `Link:` response headers (RFC 8288)
 
-Agents prefer machine-discoverable entrypoints over scraping HTML. Emit `Link` on homepage / key routes using IANA-registered `rel` types (https://www.iana.org/assignments/link-relations/):
+Agents prefer machine-discoverable entrypoints over scraping HTML. Emit `Link` on the homepage and
+key routes.
+
+**Not every `rel` below is registered.** Checked against the IANA Link Relations registry CSV on
+2026-09-25 ([registry](https://www.iana.org/assignments/link-relations/)): `alternate`,
+`api-catalog`, `service-doc` and `service-desc` are registered; **`sitemap` and `security-txt` are
+not**. They are conventions some scanners look for, not standard relations — keep them if the
+scanner matters to the user, and never describe them as IANA-registered.
 
 ```http
 Link: </llms.txt>; rel="alternate"; type="text/markdown"
@@ -77,7 +85,7 @@ Cloudflare 2025 robots.txt extension. Declares preference for how AI systems may
 
 **Watch for edge injection.** Cloudflare's managed robots.txt / AI Crawl Control writes its own
 `Content-Signal` and `Disallow` block into the served file, which can invert what the repository
-declares. Always diff live against repo — see `11-validation-toolkit.md`.
+declares. Always diff live against repo — see `14-diagnostic-checks.md` C2.
 
 ```
 Content-Signal: search=yes, ai-train=yes, ai-input=yes
@@ -109,10 +117,12 @@ For most marketing / portfolio / OSS sites: **`yes, yes, yes`** — maximum LLM 
 > **Status, re-verified 2026-08-28 — this reversed since the 2026-08-14 audit.** The draft that
 > defines the robots.txt field and the HTTP header, `draft-ietf-aipref-attach`, had expired at
 > revision `-04`. It **revived**: `-05` was submitted 2026-08-19 and is an active Internet-Draft in
-> the AIPREF WG, intended status Proposed Standard, expiring 2027-02-20. The vocabulary draft
-> `draft-ietf-aipref-vocab` moved with it and is at `-07`, same expiry
+> the AIPREF WG, intended status Proposed Standard, expiring 2027-02-20 — still `-05` on
+> 2026-09-25. The vocabulary draft `draft-ietf-aipref-vocab` moved on to **`-08`** (dated
+> 2026-09-14, expiring 2027-03-18)
 > ([Datatracker](https://datatracker.ietf.org/doc/draft-ietf-aipref-attach/), read via the
-> Datatracker API on 2026-08-28). **Still no RFC published by this working group** —
+> Datatracker API on 2026-08-28 and again on 2026-09-25). **Still no RFC published by this
+> working group** —
 > `std_level` is null on both documents.
 >
 > Consequence: the working group is alive again, but nothing has shipped. The field name and syntax
@@ -137,14 +147,21 @@ Content-Usage: /ai-ok/ train-ai=y
 Content-Usage: train-ai=n
 ```
 
-**Vocabulary** (`draft-ietf-aipref-vocab`, Proposed Standard track) currently defines **only two** categories, each `y`/`n`:
+**Vocabulary** (`draft-ietf-aipref-vocab-08`, Proposed Standard track) defines **three**
+categories, each `y`/`n` (verified 2026-09-25 — the `-08` text, §4 and its label table; `-07`
+had only the first and last):
 
-| Category | Meaning |
-|---|---|
-| `search` | indexing assets to direct users to them (classic search) |
-| `train-ai` | using assets to produce/refine a generative AI model |
+| Category | Label | Meaning |
+|---|---|---|
+| AI Training | `train-ai` | using assets to produce/refine a generative AI model |
+| AI Use | `ai-use` | *"Using an asset as input to a generative AI model, where the asset is not directly provided by the user"* — new in `-08` |
+| Search | `search` | indexing assets to direct users to them (classic search) |
 
-There is **no** category yet for real-time RAG / answer-engine input — so the `ai-input` axis you express in Cloudflare `Content-Signal` has **no AIPREF equivalent**; keep it on `Content-Signal` until AIPREF adds one. Map the common open-content policy `search=yes, ai-train=no, ai-input=yes` to `Content-Usage: search=y, train-ai=n`.
+`ai-use` is the first AIPREF counterpart to the `ai-input` axis in Cloudflare `Content-Signal`.
+It is one revision old and the draft carries an open issue on whether "direct" covers assets
+referenced by URL (issue 249), so treat the mapping as provisional. The policy
+`search=yes, ai-train=no, ai-input=yes` maps to `Content-Usage: search=y, train-ai=n, ai-use=y`.
+Keep `Content-Signal` alongside it — no crawler is known to parse either.
 
 **Caveat**: AIPREF drafts are not yet a ratified RFC (they expire-and-revise between WG revisions). Emit `Content-Usage` as an early-adopter, forward-compatible signal — do **not** drop `Content-Signal` for it yet.
 
@@ -193,7 +210,8 @@ HTTP Message Signatures (RFC 9421) lets your site cryptographically identify *it
 
 **Apply when** your site makes outbound requests (APIs, webhooks, server-to-server) and wants receivers to distinctly whitelist or rate-limit you.
 
-**Skip when** your site only receives traffic — but still ship the placeholder (passes `isitagentready.com`, costs nothing).
+**Skip when** your site only receives traffic. The empty placeholder below exists for the
+scanner, not for identity — the next paragraph says when it is worth adding.
 
 **On the empty placeholder.** Serving `{"keys": []}` passes the scanner and signs nothing. It
 declares a capability the site does not have, and a receiver fetching it learns only that there
@@ -227,14 +245,14 @@ Markdown-for-Agents is a real content-delivery investment. The rest are declarat
 harmless, and currently inert — ship them if the user wants the scanner green or wants to state
 intent, and say which of the two you are doing.
 
-## Standards declaration — AIPREF rows re-verified 2026-08-28, rest 2026-08-14
+## Standards declaration — AIPREF rows re-verified 2026-09-25, rest 2026-08-14
 
 | Signal | Standing | Source |
 |---|---|---|
 | **RFC 8288** — Link headers | Stable IETF standard since 2017 | Published RFC |
 | **RFC 9421** — HTTP Message Signatures | Stable IETF standard since 2024 | Published RFC |
 | **`Content-Signal`** | Cloudflare convention, **not IETF**, no crawler known to honour it | See §2 above |
-| **`Content-Usage`** (AIPREF) | Both drafts active as of 2026-08-28 — `attach-05`, `vocab-07`, intended Proposed Standard, expiring 2027-02-20; **no RFC published by the WG**, no crawler known to parse it | [Datatracker](https://datatracker.ietf.org/wg/aipref/documents/) |
+| **`Content-Usage`** (AIPREF) | Both drafts active as of 2026-09-25 — `attach-05` (expires 2027-02-20), `vocab-08` (expires 2027-03-18), intended Proposed Standard; **no RFC published by the WG**, no crawler known to parse it | [Datatracker](https://datatracker.ietf.org/wg/aipref/documents/) |
 | **`Accept: text/markdown`** negotiation | Emerging convention, no ratification | — |
 
 Explain this honestly if a user asks. Two of these are standards; the rest are conventions, one of

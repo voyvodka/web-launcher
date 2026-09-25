@@ -19,7 +19,8 @@ Deploy folder after build (or direct upload):
 deploy/
 ├── index.html             ← renamed coming-soon.html
 ├── favicon.svg
-├── apple-touch-icon.png   ← 180×180 PNG, opaque (iOS does not accept SVG here)
+├── favicon.ico            ← fallback for browsers without SVG favicons (see 01)
+├── apple-touch-icon.png   ← 180×180 PNG, opaque (Apple documents PNG only)
 ├── og-cover.png           ← generated via satori (see 07-og-satori.md)
 ├── robots.txt
 ├── sitemap.xml
@@ -49,7 +50,8 @@ responses your Worker code generates (verified 2026-08-14 —
 <meta name="color-scheme" content="dark light" />
 <meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff" />
 <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0a0b0e" />
-<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+<link rel="icon" href="/favicon.ico" sizes="32x32" />
+<link rel="icon" href="/favicon.svg" type="image/svg+xml" sizes="any" />
 <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
 <!-- full meta + OG + twitter + JSON-LD: see 03-discoverability-classic.md -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -96,11 +98,15 @@ responses your Worker code generates (verified 2026-08-14 —
   [Google robots meta tag docs](https://developers.google.com/search/docs/crawling-indexing/robots-meta-tag)).
   Write a robots meta tag only when the value is *not* the default (a staging page wanting
   `noindex`, for example).
-- **`rel="apple-touch-icon"` now points at a PNG, not the SVG.** Apple's touch icon is PNG only —
-  an SVG href yields no icon — and one opaque 180×180 file covers current iOS devices; iOS
-  composites transparency onto black (verified 2026-08-14 —
-  [RealFaviconGenerator: Apple touch icon](https://realfavicongenerator.net/blog/apple-touch-icon-the-good-the-bad-the-ugly/)).
-  MDN lists `apple-touch-icon` as a non-standard `rel` value, which is expected — it is Apple's.
+- **`rel="apple-touch-icon"` now points at a PNG, not the SVG.** Apple's web-content docs specify
+  a PNG file and never an SVG; one opaque 180×180 file covers current iOS devices. What iOS does
+  with a non-PNG href, and the often-repeated "transparency turns black", have no primary source —
+  `01-brand-application.md` carries the sourced version and the caveats. Ship an opaque PNG and
+  verify on a device. MDN lists `apple-touch-icon` as a non-standard `rel` value, which is
+  expected — it is Apple's.
+- **`favicon.ico` alongside the SVG.** SVG favicons reach Safari only from 26.0; the ICO covers
+  the rest (`01-brand-application.md`, icon set). Add `site.webmanifest` and the icons it lists
+  from the same file if the page should be installable.
 - **`rel="mask-icon"` dropped.** Safari-only, for macOS pinned tabs, and absent from MDN's `rel`
   value list entirely (verified 2026-08-14 —
   [MDN rel attribute](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Attributes/rel)).
@@ -167,7 +173,7 @@ usual casualty.
 Before shipping to CF Workers:
 1. Copy `coming-soon.html` → `deploy/index.html`
 2. Generate `deploy/og-cover.png` via satori (see `07-og-satori.md`) and export
-   `deploy/apple-touch-icon.png` at 180×180, opaque
+   `deploy/apple-touch-icon.png` at 180×180, opaque, plus `deploy/favicon.ico`
 3. Write `deploy/robots.txt`, `deploy/sitemap.xml`, `deploy/llms.txt`, `deploy/humans.txt`,
    `deploy/_headers`, `deploy/.well-known/security.txt` (see `03-discoverability-classic.md` +
    `06-agent-ready.md`)

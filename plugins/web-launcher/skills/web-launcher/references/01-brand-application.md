@@ -146,7 +146,9 @@ SVG logotypes using `<text font-family="...">` depend on the viewer having the f
       ```bash
       grep -rnE 'lucide|heroicons|react-icons|@tabler/icons' src/     # generic icon imports
       grep -rnE 'rounded-full|border-radius: *50%' src/ | grep -iE 'header|nav|logo|brand'
-      grep -rnP '[\x{1F300}-\x{1FAFF}\x{2600}-\x{27BF}]' src/       # emoji stand-ins
+      # emoji stand-ins — perl, because BSD grep on macOS has no -P
+      find src -type f -exec perl -CSD -ne \
+        'print "$ARGV:$.: $_" if /[\x{1F300}-\x{1FAFF}\x{2600}-\x{27BF}]/; close ARGV if eof' {} +
       grep -rniE 'placeholder|lorem|TODO.*logo|brand-dot' src/        # only catches labelled ones
       ```
 - [ ] All brand colors come from `:root` tokens, not hardcoded hex scattered around

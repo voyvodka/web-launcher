@@ -1,6 +1,6 @@
 ---
 name: web-launcher
-description: Use when diagnosing why a live site is not indexed or not cited, or when shipping, auditing, or improving a static / marketing / coming-soon / documentation / portfolio site. Traces Search Console reasons (not indexed, page with redirect, alternate canonical, 404) to the file or setting that causes them, scores AI-search visibility with GeoDaddy, applies brand kits, and covers the discoverability suite (classic SEO + GEO + AI-crawlability + structured data + agent-ready signals), Cloudflare Workers deployment with custom domain + SSL + www→apex redirect, and dependency + supply-chain hardening. Greenfield launches, retroactive audits, and brand-only refreshes; single-page and multi-page. Invoke when the user asks about SEO, GEO, indexing problems, meta tags, sitemap, robots.txt, llms.txt, structured data, JSON-LD, OG image, favicon, Cloudflare Pages/Workers, wrangler, Lighthouse, Core Web Vitals, Dependabot, isitagentready, Google Search Console, Bing Webmaster, or brand rollout.
+description: Use when diagnosing why a live site is not indexed or not cited, or when the user asks about SEO, GEO, Google Search Console, indexing problems, sitemap, robots.txt, llms.txt, JSON-LD, meta tags, OG image, favicon, Cloudflare Workers/Pages, wrangler, Lighthouse, Core Web Vitals, Bing Webmaster, isitagentready, Dependabot, or a brand rollout. Traces Search Console reasons (not indexed, page with redirect, alternate canonical, 404) to the file or setting that causes them, scores AI-search visibility with GeoDaddy, and applies brand kits. Covers shipping, auditing and improving static / marketing / coming-soon / documentation / portfolio sites: classic SEO, GEO, AI-crawlability, structured data, agent-ready signals, Cloudflare Workers deployment with custom domain + SSL + www→apex redirect, and dependency + supply-chain hardening. Greenfield launches, retroactive audits and brand-only refreshes; single-page and multi-page.
 ---
 
 # web-launcher
@@ -51,14 +51,15 @@ If ambiguous, ask once, then lock the mode.
 three areas Mode C's own definition excludes. Scanning them produces a gap report full of work the
 user did not ask for, and a gap report is a proposal whatever it is called. In Mode C, scan steps
 1-3, report only brand findings, and mention the rest in a single line at most ("I also noticed the
-site has no sitemap — say the word and I'll look at it separately"). Modes A and B run all eight.
+site has no sitemap — say the word and I'll look at it separately"). Mode A runs steps 1-7; Mode B
+runs all eight, because step 8 probes a live site.
 
 1. **Stack** — plain HTML, Astro, Next.js, Vite, Hugo, SvelteKit, Eleventy, etc. Read `package.json` and root files.
 2. **Shape** — single-page (coming-soon, landing) vs multi-page (docs, blog, marketing subpages). Count routes in `src/pages/` or equivalent.
 3. **Brand assets** — `/brand/`, `public/favicon.svg`, logotypes, color tokens in CSS / Tailwind config.
 4. **Discoverability files** — `robots.txt`, `sitemap.xml`, `llms.txt`, JSON-LD `<script type="application/ld+json">`, `.well-known/security.txt`, `humans.txt`.
 5. **Deploy state** — `wrangler.jsonc` / `wrangler.toml`, `_headers`, `_redirects`, any CF Workers / Pages binding.
-6. **Meta tags per route** — canonical, og:*, twitter:*, apple-touch-icon, mask-icon, application-name. Centralized (BaseLayout) vs per-page.
+6. **Meta tags per route** — canonical, og:*, twitter:*, favicon.ico + favicon.svg, apple-touch-icon, application-name. Centralized (BaseLayout) vs per-page. A `mask-icon` is not a gap — `01-brand-application.md` drops it.
 7. **Repo hardening** — `.github/dependabot.yml` or `renovate.json`, `.github/workflows/*audit*.yml`, lockfile, branch protection (ask user for GitHub settings).
 8. **(Mode B only) Live probe** — if URL provided, run §audit-workflow Step 1 (HTTP + meta) and Step 1b (agent-ready signals), then **run the checks in `14-diagnostic-checks.md`**. Do not report a finding about live behaviour that no check produced, and do not report a symptom without naming the file or dashboard setting that causes it.
 
@@ -66,7 +67,7 @@ Then write a **severity-ranked gap report**:
 
 - 🔴 **Critical**: missing `lang`, no canonical, no robots.txt, broken sitemap, no HTTPS, active CVE, committed secret, no branch protection
 - 🟡 **Recommended**: missing Organization schema (= no logo in Google SERP), missing og:image, incomplete meta, no AI crawler declarations, no Dependabot/Renovate, no CI audit gate, unpinned third-party Actions (incl. `@latest` lhci/Lighthouse — non-deterministic CI), no `Link:` headers
-- 🟢 **Nice**: llms.txt, humans.txt, apple-touch-icon, mask-icon, HSTS preload, additional schema types (Article/Breadcrumb/Product), Markdown-for-Agents, SBOM, socket.dev, pre-commit secret scan
+- 🟢 **Nice**: llms.txt, humans.txt, apple-touch-icon, HSTS preload, additional schema types (Article/Breadcrumb/Product), Markdown-for-Agents, SBOM, socket.dev, pre-commit secret scan
 - ⚪ **Intent only — no known technical effect** (say so when proposing): `Content-Signal`, `Content-Usage` (AIPREF), empty Web Bot Auth JWKS. Free to add, but never present them as protection or as a ranking factor — see `06-agent-ready.md`
 
 Get user approval on the plan before executing. Work in phases (brand → discoverability → deploy →
@@ -91,7 +92,7 @@ Each capability lives in a separate reference file. Read the one matching the cu
 | Mode B existing-site audit workflow (live probe commands, gap report synthesis) | [references/09-audit-workflow.md](references/09-audit-workflow.md) | Mode B always |
 | **Diagnostic checks — runnable, one verdict line each; traces "not indexed" reasons to a file or a dashboard setting** | [references/14-diagnostic-checks.md](references/14-diagnostic-checks.md) | **Mode B always, before writing any gap report about a live site.** Also whenever a claim needs proving rather than asserting |
 | Brand search / logo-in-SERP troubleshooting | [references/10-brand-serp.md](references/10-brand-serp.md) | When user asks "my logo doesn't show in Google" or "my brand isn't ranking" |
-| Validation toolkit — curl probes, 13 external validators, Lighthouse deep dive, Core Web Vitals, accessibility | [references/11-validation-toolkit.md](references/11-validation-toolkit.md) | Post-deploy, or when validating any change |
+| Validation toolkit — curl probes, 15 external validators, Lighthouse deep dive, Core Web Vitals, accessibility | [references/11-validation-toolkit.md](references/11-validation-toolkit.md) | Post-deploy, or when validating any change |
 | **Search Console — reading index status, reconstructing the candidate set, mapping a reason to its cause** | [references/16-search-console.md](references/16-search-console.md) | **Whenever indexing is in question**, or the user mentions Search Console, "not indexed", or a coverage reason. Read before claiming anything about why a page is missing |
 | Indexing acceleration — GSC, Bing Webmaster, IndexNow, backlink strategy | [references/12-indexing.md](references/12-indexing.md) | After initial deploy to accelerate discovery |
 | Dependency & supply-chain health — Dependabot, Renovate, audit CI, secret scanning, SBOM, license, branch protection | [references/13-dependency-security.md](references/13-dependency-security.md) | Repo hardening phase of any mode, or when user asks about dep-bot / security / audit |
@@ -112,11 +113,11 @@ After each phase, report back in the Output convention shape (below) before movi
 
 These tripped past launches. Apply defensively without needing to open a reference file:
 
-- **`_redirects /*  /  302` on root** creates an infinite loop (matches `/` too). Use SPA fallback via `not_found_handling: "single-page-application"` in wrangler config instead, or use specific path patterns.
+- **`_redirects /*  /  302` on root** matches `/` too and loops. Use specific path patterns. For a client-routed SPA, `not_found_handling: "single-page-application"` is the fallback; on a multi-page site use `"404-page"` — the SPA value turns every unknown route into a 200 soft 404 (`08-cloudflare-deploy.md`).
 - **Finder drag-upload hides dotfiles** (`.well-known/` gets silently dropped). Always use `wrangler deploy` CLI, never browser upload for sites with hidden folders.
-- **Edge cache holds pre-redeploy 200s** — when testing after adding a worker script, use fresh random paths or ask user to Purge Everything in CF Caching.
-- **Dashboard "Upload and deploy" flow** can create a Worker without the Assets binding (shows Bindings=0) — manifests as "There is nothing here yet" placeholder. Redeploy via wrangler CLI.
-- **OAuth token from `wrangler login` lacks zone scope** — can't create Redirect Rules via API; use Worker-level redirect script instead (see `08-cloudflare-deploy.md`).
+- **A Worker script does not run for requests that match a static asset.** Host redirects and header logic look fine on random paths while every real page bypasses them. Set `run_worker_first` or move the logic to a zone rule, and test on a real page (`08-cloudflare-deploy.md`, routing order).
+- **Long `max-age` / `immutable` paths outlive a redeploy** in browsers, and no purge reaches a browser cache. Everything else revalidates by default — test with a cache-busting query string rather than asking for a purge.
+- **`wrangler login`'s OAuth token carries `zone:read` only** — it cannot create Redirect Rules, change SSL mode or purge cache. The www→apex redirect is a zone Redirect Rule the user adds in the dashboard; a Worker redirect is the fallback and needs `run_worker_first` (`08-cloudflare-deploy.md`).
 - **`og:image` as SVG** — Twitter/X, Meta, LinkedIn don't render SVG social cards. Always PNG.
 - **Fonts in SVG logotypes** — `<text font-family="...">` depends on system font; outline to paths for distribution.
 - **Email in security.txt** — verify address actually exists before publishing (no MX on new domains = bounces).

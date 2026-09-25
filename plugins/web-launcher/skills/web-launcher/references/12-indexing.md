@@ -134,16 +134,13 @@ Automate as a **step in the deploy pipeline**, not as a Cloudflare trigger.
 
 ## Realistic timeline
 
-⚠️ **Nothing in this section is vendor-published.** Google explicitly does not commit to a crawl or
-indexing schedule, and no search engine publishes time-to-index targets. These are field
-observations to set rough expectations with — always label them as estimates when saying them out
-loud, and never as a commitment.
-
-- **First Google crawl** after "Request indexing": 1-3 days
-- **Brand query top result**: 2-6 weeks for new domains; longer if older competing sites hold the slot
-- **Rich snippets appear**: 1-4 weeks after valid schema deploys
-- **Knowledge Panel + logo in SERP**: 4-12 weeks with strong entity signals
-- **Wikidata → Knowledge Panel**: weeks to months after the entry is accepted
+**No number goes to the user.** Google explicitly does not commit to a crawl or indexing schedule,
+and no search engine publishes time-to-index targets. The ranges earlier revisions of this file
+carried (first crawl in days, logo in weeks, Knowledge Panel in months) were field observations
+with no source, and they disagreed with the ranges in `10-brand-serp.md` — two unsourced numbers
+for the same event is how a user gets told both. Say "days to weeks, depending on how often the
+site is crawled" and point at the Page indexing report for the actual signal.
+`09-audit-workflow.md` Step 6 states the same rule.
 
 ## Reading a "Page indexing" report the user pasted
 

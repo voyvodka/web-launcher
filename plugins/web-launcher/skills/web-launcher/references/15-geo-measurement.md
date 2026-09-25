@@ -69,7 +69,7 @@ choose.
 | Check | GeoDaddy expects | This skill's position |
 |---|---|---|
 | `geo-schema-stacking` (Medium, 5 pts) | `Article` **+ `ItemList` + `FAQPage`** all present | `FAQPage` was dropped: Google removed the rich result 2026-05-07 and deleted the documentation page. See `04-geo.md`. **Following this skill costs points here.** |
-| `geo-ai-bot-*` (Critical, 10 pts each) | `GPTBot`, `ClaudeBot`, `PerplexityBot`, `GoogleOther`, `Bytespider`, `CCBot` not blocked | Right that a catch-all `Disallow` is expensive — six critical checks, 60 points. **But four of the six tokens it checks are training or generic crawlers, not the retrieval crawlers that decide citation.** See below |
+| `geo-ai-bot-*` (Critical, 10 pts each) | `GPTBot`, `ClaudeBot`, `PerplexityBot`, `GoogleOther`, `Bytespider`, `CCBot` not blocked | Right that a catch-all `Disallow` is expensive — six critical checks, 60 points. **But five of the six tokens it checks — all but `PerplexityBot` — are training or generic crawlers, not the retrieval crawlers that decide citation** (token list read from the bundled `geodaddy 0.2.2` binary, 2026-09-25). See below |
 | `geo-listicle` (Medium) | Numbered headings, "Top N" patterns, ordered lists, comparison tables | Reasonable as a formatting heuristic. It scores *shape*, not usefulness — do not restructure good prose into a listicle purely for this |
 
 The `FAQPage` conflict is the one that will come up. Both positions are defensible: GeoDaddy scores
@@ -123,14 +123,44 @@ them citation blockers.
 
 **What to do:** report the lost points, state that the failures are a stated policy rather than a
 misconfiguration, and then check the tokens that actually decide citation — none of which GeoDaddy
-scores. Run:
+scores. A `grep` for the token names cannot answer this: it prints `User-agent:` lines, never the
+`Disallow:` under them, and it prints nothing at all when a `User-agent: *` group blocks
+everything. Resolve each token to the group that governs it — its own group if one names it,
+otherwise `*` — and read that group's root rule:
 
 ```bash
-curl -s https://DOMAIN/robots.txt | grep -iE 'OAI-SearchBot|ChatGPT-User|Claude-SearchBot|Claude-User|PerplexityBot'
+robots=$(mktemp)
+if ! curl -sf --max-time 20 "https://DOMAIN/robots.txt" > "$robots"; then
+  echo "?    robots.txt unreachable or not 200 — check did not run"
+else
+  for bot in OAI-SearchBot ChatGPT-User Claude-SearchBot Claude-User PerplexityBot; do
+    awk -v bot="$bot" '
+      BEGIN { b = tolower(bot) }
+      { line = $0; sub(/#.*/, "", line); gsub(/\r/, "", line); l = tolower(line) }
+      l ~ /^[ \t]*user-agent[ \t]*:/ {
+        ua = l; sub(/^[^:]*:[ \t]*/, "", ua); sub(/[ \t]+$/, "", ua)
+        if (!run) { mine = 0; star = 0 }
+        run = 1
+        if (ua == b) { mine = 1; named = 1 }
+        if (ua == "*") star = 1
+        next
+      }
+      l ~ /^[ \t]*disallow[ \t]*:[ \t]*\/[ \t]*$/ { if (mine) md = 1; if (star) sd = 1 }
+      l ~ /^[ \t]*allow[ \t]*:[ \t]*\/[ \t]*$/    { if (mine) ma = 1; if (star) sa = 1 }
+      l ~ /[^ \t]/ { run = 0 }
+      END {
+        blocked = named ? (md && !ma) : (sd && !sa)
+        printf "%s %s — %s group\n", blocked ? "FAIL" : "OK  ", bot, named ? "own" : "\"*\""
+      }' "$robots"
+  done
+fi
+rm -f "$robots"
 ```
 
-No `Disallow` against those means citation visibility is intact regardless of the score. Report that
-result, not the score, when the user asks whether they are visible to AI search. Only recommend unblocking training crawlers
+`OK` on all five means no root-level `Disallow` reaches the citation crawlers, regardless of the
+score. Path-level rules (`Disallow: /private/`) are not judged here — they block pages, not the
+site. Report this result, not the score, when the user asks whether they are visible to AI
+search. Only recommend unblocking training crawlers
 if the user actually wants to be trained on, and say that is what the change means.
 
 Bytespider is a related case: GeoDaddy treats blocking it as critical, while `03-discoverability-classic.md`

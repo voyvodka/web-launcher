@@ -41,7 +41,10 @@ source drift and live chains are different defects with the same symptom.
 ## Step 1: Live probe (HTTP + meta harvest)
 
 ```bash
-IP=188.114.97.3  # CF anycast IP; change if origin not behind CF
+# Whatever DNS answers now — the audit must not assume the origin is on Cloudflare. `dig +short`
+# can print a CNAME first; keep the first IPv4 line.
+IP=$(dig +short DOMAIN | grep -E '^[0-9.]+$' | head -1)
+[ -n "$IP" ] || echo "?    DOMAIN did not resolve — none of the probes below can run"
 for p in / /robots.txt /sitemap.xml /llms.txt /humans.txt /og-cover.png /favicon.svg /.well-known/security.txt /nonexistent-xyz; do
   printf "%-36s " "$p"
   curl -sI --resolve DOMAIN:443:$IP --max-time 10 "https://DOMAIN$p" | head -1
@@ -97,8 +100,9 @@ ls .github/workflows/*.yml 2>/dev/null | xargs grep -l -E "(audit|snyk|gitleaks)
 grep -o '"packageManager"[^,]*' package.json 2>/dev/null
 ls pnpm-lock.yaml yarn.lock package-lock.json bun.lock bun.lockb 2>/dev/null
 
-# Third-party actions pinned to SHA?
-grep -rE "uses: [^a-zA-Z].*@v[0-9]" .github/workflows/ 2>/dev/null
+# Third-party actions NOT SHA-pinned? Same as 13.11 #4: output is a finding, silence is clean.
+grep -rhoE "uses: [^ ]+@v[0-9][^ ]*" .github/workflows/ 2>/dev/null \
+  | grep -vE "uses: (actions|github)/" | sort -u
 
 # Pending CVEs? Run the ONE that matches the project.
 # Not `pnpm audit || npm audit` — audit tools exit non-zero when they FIND something, so the
@@ -153,7 +157,7 @@ Ask user to run (can't be automated without browser):
 
 Run yourself, no browser needed:
 
-- **Lighthouse** — `npx lighthouse@13.4.1`, desktop *and* mobile. Mobile is the default form
+- **Lighthouse** — `npx lighthouse@13.5.0`, desktop *and* mobile. Mobile is the default form
   factor: pass **no** preset for it. See `11-validation-toolkit.md` §11.3 for the full invocation
   and for the Agentic Browsing category, which is in the standard config from Lighthouse 13.3.0.
 
@@ -190,21 +194,26 @@ Group fixes by file to minimize churn:
 
 ```
 Fix group A: robots.txt
-  - Add Content-Signal directive
-  - Add missing AI crawler blocks
+  - Correct AI crawler tokens (see 03 — dead tokens read as coverage)
   - Reference sitemap.xml URL
 
 Fix group B: <head> (all routes or BaseLayout)
   - Add Organization schema JSON-LD
-  - Add apple-touch-icon, mask-icon
+  - Add apple-touch-icon (PNG), favicon.ico fallback
   - Add og:locale, og:image:width/height
 
 Fix group C: new files
   - /llms.txt
   - /humans.txt
   - /.well-known/security.txt
-  - /.well-known/http-message-signatures-directory (JWKS placeholder)
+
+Intent-only, only if the user asks to state intent or wants the scanner green (06 matrix):
+  - Content-Signal / Content-Usage in robots.txt
+  - /.well-known/http-message-signatures-directory (empty JWKS placeholder)
 ```
+
+Say which of the two reasons applies when proposing an intent-only item. None of them changes a
+crawler's behaviour, so they sit in the ⚪ intent-only band of the `SKILL.md` rubric, never above.
 
 Get approval per group before writing. Apply changes.
 
@@ -220,7 +229,8 @@ Repeat Step 1, Step 1b on patched paths. Confirm:
 - Previously-missing files now return 200
 - New meta tags show up in head harvest
 - Rich Results Test re-detects expected schemas
-- `isitagentready.com` score improves
+- `isitagentready.com` result, reported as-is — a lower score after declining an intent-only item
+  is a choice, not a regression (see `06-agent-ready.md`)
 
 Then re-run every check from `14-diagnostic-checks.md` that failed in the gap report, and **paste
 the before and after output for each**. A fix is closed when the same command that printed `FAIL`
@@ -244,12 +254,15 @@ Recurring patterns worth probing early. This is a checklist drawn from prior aud
 frequency table — no measurement backs an ordering, so do not present it to a user as one.
 
 - ❌ Organization schema missing → logo not in SERP Knowledge Panel
-- ❌ `Content-Signal` missing → agent-readiness scanner fails, GEO weaker
+- ⚪ `Content-Signal` missing → the scanner flags it; no crawler acts on it and it is not a GEO
+  factor (`06-agent-ready.md` §2). Mention it as intent-only, never as a defect
 - ❌ `Link:` headers missing → agentic-web probe fails. Confirm with **C8**, which distinguishes
   "never declared" from "declared in `_headers` but not served"
-- ❌ JWKS placeholder missing → returns HTML fallback at `.well-known/http-message-signatures-directory`
+- ⚪ JWKS placeholder missing → the scanner flags it; an empty key set signs nothing. Intent-only,
+  same rule as above
 - ⚠ `og:image` absent, SVG, or 404 → blank social card. **C9** checks every sitemap URL at once
-- ⚠ `apple-touch-icon` + `mask-icon` missing — iOS home screen generic icon
+- ⚠ `apple-touch-icon` missing — iOS home screen generic icon (`mask-icon` is not a finding; see
+  `01-brand-application.md`, which drops it)
 - ⚠ Repo missing Dependabot/Renovate config — passive CVE exposure
 - ⚠ **GitHub Actions pinned to a mutable tag** (`uses: owner/action@v4`) rather than a full commit
   SHA — a tag can be repointed at new code, so tag-pinning is the supply-chain risk. This is what

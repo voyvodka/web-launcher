@@ -102,17 +102,23 @@ number is *expected* rather than *broken*.
 `urlInspection.index.inspect` returns `indexStatusResult`. Use these:
 
 ```
-verdict          PASS | PARTIAL | FAIL | NEUTRAL | VERDICT_UNSPECIFIED
-robotsTxtState   ALLOWED | DISALLOWED
+verdict          PASS | FAIL | NEUTRAL | VERDICT_UNSPECIFIED
+robotsTxtState   ALLOWED | DISALLOWED | ROBOTS_TXT_STATE_UNSPECIFIED
 indexingState    INDEXING_ALLOWED | BLOCKED_BY_META_TAG | BLOCKED_BY_HTTP_HEADER
-                 | BLOCKED_BY_ROBOTS_TXT
+                 | INDEXING_STATE_UNSPECIFIED
 pageFetchState   SUCCESSFUL | SOFT_404 | BLOCKED_ROBOTS_TXT | NOT_FOUND | ACCESS_DENIED
                  | SERVER_ERROR | REDIRECT_ERROR | ACCESS_FORBIDDEN | BLOCKED_4XX
-                 | INTERNAL_CRAWL_ERROR | INVALID_URL
+                 | INTERNAL_CRAWL_ERROR | INVALID_URL | PAGE_FETCH_STATE_UNSPECIFIED
 googleCanonical  string — the canonical Google picked
 userCanonical    string — the canonical you declared
 lastCrawlTime, crawledAs, sitemap[], referringUrls[], inspectionResultLink
 ```
+
+Two values Google still lists are marked *"Reserved, no longer in use"*: `verdict PARTIAL` and
+`indexingState BLOCKED_BY_ROBOTS_TXT` (verified 2026-09-25 —
+[UrlInspectionResult reference](https://developers.google.com/webmaster-tools/v1/urlInspection.index/UrlInspectionResult)).
+Never branch on either; a robots.txt block surfaces as `robotsTxtState: DISALLOWED` and
+`pageFetchState: BLOCKED_ROBOTS_TXT`.
 
 **`coverageState` is a free-text string, not an enum.** Google types it as `string` and publishes no
 list of values — and **it is translated according to `languageCode`**. Branch on it and the logic
@@ -135,7 +141,7 @@ Do not conclude "no page links here" from an empty `referringUrls` — crawl for
 | Not found (404) | `pageFetchState: NOT_FOUND` | A redirect issued before the target was resolved (C1), a sitemap listing dead URLs (C5), or an old external link. Trace it; do not delete the URL and call it fixed |
 | Alternate page with proper canonical tag | `googleCanonical` points elsewhere and you agree | Normal. Only a problem if you did *not* intend that canonical (C6) |
 | Google chose different canonical | `googleCanonical != userCanonical` | Real conflict — your declared canonical is being overruled. Check for duplicate content and mismatched signals (C6, C7) |
-| Blocked by robots.txt | `indexingState: BLOCKED_BY_ROBOTS_TXT` | Check the **live** file, not the repository — a CDN may be injecting rules (C2) |
+| Blocked by robots.txt | `robotsTxtState: DISALLOWED` / `pageFetchState: BLOCKED_ROBOTS_TXT` | Check the **live** file, not the repository — a CDN may be injecting rules (C2) |
 | Excluded by noindex tag | `BLOCKED_BY_META_TAG` / `BLOCKED_BY_HTTP_HEADER` | Staging leftovers, or a shell served without the render path (C7) |
 | Soft 404 | `pageFetchState: SOFT_404` | A thin or empty page returning 200 (C7) |
 | Crawled – currently not indexed | — | Not technical. Say so |

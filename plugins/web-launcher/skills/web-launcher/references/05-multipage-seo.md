@@ -36,16 +36,17 @@ recommend are unmaintained, and in the Next.js case the framework absorbed the f
 
 | Framework | Use | Checked 2026-08-14 |
 |---|---|---|
-| Astro | `@astrojs/sitemap` — auto from `src/pages/` | `3.7.3`, published 2026-05-26 — maintained |
+| Astro | `@astrojs/sitemap` — auto from `src/pages/` | `3.7.4`, published 2026-08-31 — maintained (re-checked 2026-09-25) |
 | Next.js | **Built-in: `app/sitemap.ts`** returning a `MetadataRoute.Sitemap` array; `generateSitemaps()` to split large sites | Introduced in `v13.3.0`; localisation added in `14.2.0` ([Next.js docs](https://nextjs.org/docs/app/api-reference/file-conventions/metadata/sitemap)). **Do not add `next-sitemap`** — last published 2023-09-06 |
 | Hugo | Built-in — `hugo` emits `/sitemap.xml` | — |
 | Eleventy | Write a template that renders the collection to XML | `eleventy-plugin-sitemap` last published 2020-06-20; six years unmaintained |
-| SvelteKit | An endpoint that renders the XML, or `svelte-sitemap` | `4.0.4`, published 2026-06-30 — maintained |
+| SvelteKit | An endpoint that renders the XML, or `svelte-sitemap` | `4.0.4`, published 2026-06-30 — maintained (still latest 2026-09-25) |
 | Plain static | Hand-write or generate from the filesystem | — |
 
-npm dates above come from the registry on 2026-08-14. A generator that has not shipped in years
-is not automatically broken, but it is one framework release away from being so — and a sitemap
-that silently stops updating is invisible until Search Console reports stale URLs.
+npm dates above come from the registry on 2026-08-14, re-read 2026-09-25. A generator that has
+not shipped in years is not automatically broken, but it is one framework release away from being
+so — and a sitemap that silently stops updating is invisible until Search Console reports stale
+URLs.
 
 ## Article schema on blog / changelog posts
 
@@ -69,12 +70,16 @@ that silently stops updating is invisible until Search Console reports stale URL
 
 Verification:
 ```bash
-# Find orphan pages (pages not linked from any other page)
-# For Astro/Next: grep content collection + cross-ref pages/
-grep -rn 'href="/docs/' src/ | awk -F'href="' '{print $2}' | awk -F'"' '{print $1}' | sort -u > linked.txt
-ls src/pages/docs/*.md src/pages/docs/*.mdx | awk -F'/' '{print "/"$NF}' | sed 's/\.mdx$//;s/\.md$//' > all.txt
-diff linked.txt all.txt  # missing from linked = orphan
+# Orphan pages: routes under src/pages/docs/ that no href anywhere in src/ points at.
+# Both lists hold full route paths with the trailing slash stripped, so they compare like for like.
+grep -rhoE 'href="/docs/[^"#?]*' src/ | sed 's|^href="||; s|/$||' | sort -u > linked.txt
+find src/pages/docs \( -name '*.md' -o -name '*.mdx' -o -name '*.astro' \) \
+  | sed 's|^src/pages||; s|\.[a-z]*$||; s|/index$||' | sort -u > all.txt
+comm -13 linked.txt all.txt   # printed = orphan; silence = every route is linked
 ```
+
+A page that links only to itself still counts as linked here; read the hits, then spot-check the
+routes that only one page mentions.
 
 ## Dynamic OG images per page
 
